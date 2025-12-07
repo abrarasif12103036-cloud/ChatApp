@@ -6,10 +6,17 @@ export default function ChatPage() {
   const router = useRouter();
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
-  const [currentUser, setCurrentUser] = useState('');
+  const [currentUser, setCurrentUser] = useState(() => {
+    // Initialize from localStorage immediately
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('currentUser') || '';
+    }
+    return '';
+  });
   const [otherUser, setOtherUser] = useState('');
   const [preview, setPreview] = useState('');
   const [enlargedImage, setEnlargedImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -42,6 +49,7 @@ export default function ChatPage() {
     }
     setCurrentUser(user);
     setOtherUser(user === 'Abrar' ? 'Mohona' : 'Abrar');
+    setIsLoading(false);
 
     // Load existing messages from API
     const loadMessages = async () => {
@@ -74,7 +82,7 @@ export default function ChatPage() {
     }, 500);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     scrollToBottom();
@@ -96,44 +104,50 @@ export default function ChatPage() {
     
     // Ensure currentUser is set
     if (!currentUser) {
-      console.error('User not set');
+      alert('User not loaded. Please refresh the page.');
       return;
     }
     
     if (!inputValue.trim() && !preview) {
-      console.log('No message or image to send');
       return;
     }
 
-    const newMessage = {
-      sender: currentUser,
-      text: inputValue || '📷 Image',
-      image: preview || null
-    };
-
     try {
+      const newMessage = {
+        sender: currentUser,
+        text: inputValue || '📷 Image',
+        image: preview || null
+      };
+
       console.log('Sending message:', newMessage);
+      
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMessage)
       });
 
-      console.log('Response status:', res.status);
-      if (res.ok) {
-        console.log('Message sent successfully');
-        // Reload messages
-        const messagesRes = await fetch('/api/messages');
+      if (!res.ok) {
+        throw new Error(`API error: ${res.status}`);
+      }
+
+      console.log('Message sent successfully');
+      
+      // Clear input immediately
+      setInputValue('');
+      setPreview('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      
+      // Reload messages from API
+      const messagesRes = await fetch('/api/messages');
+      if (messagesRes.ok) {
         const updatedMessages = await messagesRes.json();
+        console.log('Updated messages:', updatedMessages);
         setMessages(updatedMessages);
-        setInputValue('');
-        setPreview('');
-        if (fileInputRef.current) fileInputRef.current.value = '';
-      } else {
-        console.error('Failed to send message:', res.status);
       }
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Error sending message:', error);
+      alert('Failed to send message: ' + error.message);
     }
   };
 
@@ -152,6 +166,10 @@ export default function ChatPage() {
       }
     }
   };
+
+  if (!currentUser) {
+    return <div className={styles.container}><div style={{ color: '#00d4ff', textAlign: 'center', paddingTop: '50px' }}>Loading...</div></div>;
+  }
 
   return (
     <div className={styles.container}>
