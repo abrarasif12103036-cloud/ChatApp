@@ -55,17 +55,16 @@ export default function ChatPage() {
     loadMessages();
 
     // Auto-refresh every 500ms
+    let lastMessageCount = 0;
     const interval = setInterval(() => {
       fetch('/api/messages')
         .then(res => res.json())
         .then(data => {
-          setMessages((prevMessages) => {
-            // Only update if the count changed
-            if (data.length !== prevMessages.length) {
-              return data;
-            }
-            return prevMessages;
-          });
+          // Only update if the count actually changed
+          if (data.length !== lastMessageCount) {
+            lastMessageCount = data.length;
+            setMessages(data);
+          }
         })
         .catch(error => console.error('Failed to fetch messages:', error));
     }, 500);
