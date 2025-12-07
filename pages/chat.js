@@ -128,6 +128,8 @@ export default function ChatPage() {
       });
 
       if (!res.ok) {
+        const errorBody = await res.json().catch(() => ({}));
+        console.error('API Error Response:', errorBody);
         throw new Error(`API error: ${res.status}`);
       }
 
