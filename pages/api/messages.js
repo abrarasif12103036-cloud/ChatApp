@@ -3,11 +3,24 @@ let messages = [];
 async function handler(req, res) {
   try {
     // Normalize method - handle edge cases
-    const method = (req.method || '').toUpperCase().trim();
+    const method = req.method ? String(req.method).toUpperCase().trim() : 'UNDEFINED';
+    
+    // Always include debug info in response
+    const debugInfo = {
+      receivedMethod: method,
+      methodExists: Boolean(req.method),
+      methodType: typeof req.method,
+      methodRaw: req.method
+    };
     
     if (method === 'GET') {
-      return res.status(200).json({ messages, debug: { method } });
-    } else if (method === 'POST') {
+      return res.status(200).json({ 
+        ok: true,
+        messages,
+        debug: debugInfo 
+      });
+    } 
+    else if (method === 'POST') {
       const body = req.body || {};
       
       const newMessage = {
@@ -19,24 +32,35 @@ async function handler(req, res) {
       };
       
       messages.push(newMessage);
-      return res.status(201).json({ message: newMessage, debug: { method } });
-    } else if (method === 'DELETE') {
+      return res.status(201).json({ 
+        ok: true,
+        message: newMessage,
+        debug: debugInfo 
+      });
+    } 
+    else if (method === 'DELETE') {
       messages = [];
-      return res.status(200).json({ message: 'Messages cleared', debug: { method } });
-    } else if (method === 'OPTIONS') {
+      return res.status(200).json({ 
+        ok: true,
+        message: 'Messages cleared',
+        debug: debugInfo 
+      });
+    } 
+    else if (method === 'OPTIONS') {
       return res.status(200).end();
     }
     
-    // Log what we received
+    // Unknown method
     return res.status(405).json({ 
+      ok: false,
       error: 'Method not allowed',
-      received: method,
-      expected: ['GET', 'POST', 'DELETE']
+      debug: debugInfo
     });
   } catch (error) {
     return res.status(500).json({ 
+      ok: false,
       error: 'Internal server error',
-      details: error.message
+      errorMessage: error.message
     });
   }
 }
