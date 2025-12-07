@@ -17,7 +17,6 @@ function initializeCache() {
       messagesCache = JSON.parse(data);
     }
   } catch (error) {
-    console.error('Error initializing cache:', error);
     messagesCache = [];
   }
 }
@@ -39,41 +38,40 @@ function setMessages(messages) {
       fs.writeFileSync(messagesFile, JSON.stringify(messages, null, 2), 'utf-8');
     }
   } catch (error) {
-    console.error('Error saving messages:', error);
+    // Silently fail on file write errors
   }
 }
 
 // Initialize on module load
 initializeCache();
 
-function handler(req, res) {
+async function handler(req, res) {
   try {
-    if (req.method === 'GET') {
-      // Get all messages
+    const method = (req.method || '').toUpperCase();
+    
+    if (method === 'GET') {
       const messages = getMessages();
       return res.status(200).json(messages);
-    } else if (req.method === 'POST') {
-      // Add new message
+    } else if (method === 'POST') {
       const messages = getMessages();
+      const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {});
       const newMessage = {
         id: Date.now(),
-        sender: req.body.sender,
-        text: req.body.text,
-        image: req.body.image || null,
+        sender: body.sender || 'Unknown',
+        text: body.text || '',
+        image: body.image || null,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
       messages.push(newMessage);
       setMessages(messages);
       return res.status(201).json(newMessage);
-    } else if (req.method === 'DELETE') {
-      // Clear all messages
+    } else if (method === 'DELETE') {
       setMessages([]);
       return res.status(200).json({ message: 'Messages cleared' });
     } else {
-      return res.status(405).json({ error: 'Method not allowed' });
+      return res.status(405).json({ error: 'Method not allowed', received: method });
     }
   } catch (error) {
-    console.error('API Error:', error);
     return res.status(500).json({ error: 'Internal server error' });
   }
 }
