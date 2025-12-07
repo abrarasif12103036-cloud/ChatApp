@@ -57,7 +57,7 @@ export default function ChatPage() {
         const res = await fetch('/api/messages');
         const data = await res.json();
         console.log('Loaded messages:', data);
-        setMessages(data);
+        setMessages(data.messages || []);
       } catch (error) {
         console.error('Failed to load messages:', error);
       }
@@ -71,11 +71,12 @@ export default function ChatPage() {
       fetch('/api/messages')
         .then(res => res.json())
         .then(data => {
+          const messagesList = data.messages || [];
           // Only update if the count actually changed
-          if (data.length !== lastMessageCount) {
-            lastMessageCount = data.length;
-            console.log('Messages updated:', data.length);
-            setMessages(data);
+          if (messagesList.length !== lastMessageCount) {
+            lastMessageCount = messagesList.length;
+            console.log('Messages updated:', messagesList.length);
+            setMessages(messagesList);
           }
         })
         .catch(error => console.error('Failed to fetch messages:', error));
@@ -143,9 +144,9 @@ export default function ChatPage() {
       // Reload messages from API
       const messagesRes = await fetch('/api/messages');
       if (messagesRes.ok) {
-        const updatedMessages = await messagesRes.json();
-        console.log('Updated messages:', updatedMessages);
-        setMessages(updatedMessages);
+        const data = await messagesRes.json();
+        console.log('Updated messages:', data);
+        setMessages(data.messages || []);
       }
     } catch (error) {
       console.error('Error sending message:', error);
