@@ -1,0 +1,11 @@
+{
+  "buildCommand": "next build",
+  "outputDirectory": ".next",
+  "framework": "nextjs",
+  "env": {
+    "NEXT_PUBLIC_BOY_USER": "@NEXT_PUBLIC_BOY_USER",
+    "NEXT_PUBLIC_BOY_PASS": "@NEXT_PUBLIC_BOY_PASS",
+    "NEXT_PUBLIC_GIRL_USER": "@NEXT_PUBLIC_GIRL_USER",
+    "NEXT_PUBLIC_GIRL_PASS": "@NEXT_PUBLIC_GIRL_PASS"
+  }
+}
