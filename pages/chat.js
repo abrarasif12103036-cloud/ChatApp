@@ -6,13 +6,7 @@ export default function ChatPage() {
   const router = useRouter();
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
-  const [currentUser, setCurrentUser] = useState(() => {
-    // Initialize from localStorage immediately
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('currentUser') || '';
-    }
-    return '';
-  });
+  const [currentUser, setCurrentUser] = useState('');
   const [otherUser, setOtherUser] = useState('');
   const [preview, setPreview] = useState('');
   const [enlargedImage, setEnlargedImage] = useState(null);
