@@ -1,26 +1,20 @@
 let messages = [];
 
-async function handler(req, res) {
-  try {
-    // Normalize method - handle edge cases
-    const method = req.method ? String(req.method).toUpperCase().trim() : 'UNDEFINED';
-    
-    // Always include debug info in response
-    const debugInfo = {
-      receivedMethod: method,
-      methodExists: Boolean(req.method),
-      methodType: typeof req.method,
-      methodRaw: req.method
-    };
-    
-    if (method === 'GET') {
-      return res.status(200).json({ 
-        ok: true,
-        messages,
-        debug: debugInfo 
-      });
-    } 
-    else if (method === 'POST') {
+export default async function handler(req, res) {
+  // Ensure JSON response
+  res.setHeader('Content-Type', 'application/json');
+
+  const method = req.method;
+  
+  if (method === 'GET') {
+    return res.status(200).json({ 
+      ok: true,
+      messages,
+      debug: { method }
+    });
+  } 
+  else if (method === 'POST') {
+    try {
       const body = req.body || {};
       
       const newMessage = {
@@ -35,34 +29,33 @@ async function handler(req, res) {
       return res.status(201).json({ 
         ok: true,
         message: newMessage,
-        debug: debugInfo 
+        debug: { method }
       });
-    } 
-    else if (method === 'DELETE') {
-      messages = [];
-      return res.status(200).json({ 
-        ok: true,
-        message: 'Messages cleared',
-        debug: debugInfo 
+    } catch (error) {
+      return res.status(500).json({ 
+        ok: false,
+        error: 'Failed to create message',
+        details: error.message
       });
-    } 
-    else if (method === 'OPTIONS') {
-      return res.status(200).end();
     }
-    
-    // Unknown method
+  } 
+  else if (method === 'DELETE') {
+    messages = [];
+    return res.status(200).json({ 
+      ok: true,
+      message: 'Messages cleared',
+      debug: { method }
+    });
+  } 
+  else if (method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  else {
     return res.status(405).json({ 
       ok: false,
       error: 'Method not allowed',
-      debug: debugInfo
-    });
-  } catch (error) {
-    return res.status(500).json({ 
-      ok: false,
-      error: 'Internal server error',
-      errorMessage: error.message
+      received: method,
+      allowed: ['GET', 'POST', 'DELETE']
     });
   }
 }
-
-export default handler;
