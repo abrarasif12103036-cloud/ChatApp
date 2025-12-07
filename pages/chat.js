@@ -41,23 +41,33 @@ export default function ChatPage() {
     setCurrentUser(user);
     setOtherUser(user === 'Abrar' ? 'Mohona' : 'Abrar');
 
-    // Load existing messages
-    const saved = localStorage.getItem('chatMessages');
-    if (saved) setMessages(JSON.parse(saved));
-
-    // Auto-refresh every 500ms - only update if messages changed
-    const interval = setInterval(() => {
-      const updated = localStorage.getItem('chatMessages');
-      if (updated) {
-        setMessages((prevMessages) => {
-          const newMessages = JSON.parse(updated);
-          // Only update if the count changed
-          if (newMessages.length !== prevMessages.length) {
-            return newMessages;
-          }
-          return prevMessages;
-        });
+    // Load existing messages from API
+    const loadMessages = async () => {
+      try {
+        const res = await fetch('/api/messages');
+        const data = await res.json();
+        setMessages(data);
+      } catch (error) {
+        console.error('Failed to load messages:', error);
       }
+    };
+
+    loadMessages();
+
+    // Auto-refresh every 500ms
+    const interval = setInterval(() => {
+      fetch('/api/messages')
+        .then(res => res.json())
+        .then(data => {
+          setMessages((prevMessages) => {
+            // Only update if the count changed
+            if (data.length !== prevMessages.length) {
+              return data;
+            }
+            return prevMessages;
+          });
+        })
+        .catch(error => console.error('Failed to fetch messages:', error));
     }, 500);
 
     return () => clearInterval(interval);
@@ -78,24 +88,35 @@ export default function ChatPage() {
     reader.readAsDataURL(file);
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!inputValue.trim() && !preview) return;
 
     const newMessage = {
-      id: Date.now(),
       sender: currentUser,
       text: inputValue || '📷 Image',
-      image: preview || null,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      image: preview || null
     };
 
-    const updatedMessages = [...messages, newMessage];
-    setMessages(updatedMessages);
-    localStorage.setItem('chatMessages', JSON.stringify(updatedMessages));
-    setInputValue('');
-    setPreview('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newMessage)
+      });
+
+      if (res.ok) {
+        // Reload messages
+        const messagesRes = await fetch('/api/messages');
+        const updatedMessages = await messagesRes.json();
+        setMessages(updatedMessages);
+        setInputValue('');
+        setPreview('');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
   };
 
   const handleLogout = () => {
@@ -103,10 +124,14 @@ export default function ChatPage() {
     router.push('/');
   };
 
-  const clearChat = () => {
+  const clearChat = async () => {
     if (confirm('Clear all messages?')) {
-      localStorage.removeItem('chatMessages');
-      setMessages([]);
+      try {
+        await fetch('/api/messages', { method: 'DELETE' });
+        setMessages([]);
+      } catch (error) {
+        console.error('Failed to clear messages:', error);
+      }
     }
   };
 
