@@ -1,33 +1,65 @@
-let messages = [];
+import connectDB from '../../lib/mongodb';
+import Message from '../../lib/models/Message';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
+  
+  try {
+    await connectDB();
+  } catch (error) {
+    return res.status(500).json({ 
+      ok: false,
+      error: 'Database connection failed',
+      details: error.message
+    });
+  }
 
   const method = req.method;
   
   if (method === 'GET') {
-    return res.status(200).json({ 
-      ok: true,
-      messages,
-      debug: { method }
-    });
+    try {
+      const messages = await Message.find().sort({ createdAt: 1 });
+      return res.status(200).json({ 
+        ok: true,
+        messages: messages.map(msg => ({
+          id: msg._id,
+          sender: msg.sender,
+          text: msg.text,
+          image: msg.image,
+          timestamp: msg.timestamp
+        })),
+        debug: { method }
+      });
+    } catch (error) {
+      return res.status(500).json({ 
+        ok: false,
+        error: 'Failed to fetch messages',
+        details: error.message
+      });
+    }
   } 
   else if (method === 'POST') {
     try {
       const body = req.body || {};
       
-      const newMessage = {
-        id: Date.now(),
+      const newMessage = new Message({
         sender: body.sender || 'Unknown',
         text: body.text || '',
         image: body.image || null,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
+      });
       
-      messages.push(newMessage);
+      await newMessage.save();
+      
       return res.status(201).json({ 
         ok: true,
-        message: newMessage,
+        message: {
+          id: newMessage._id,
+          sender: newMessage.sender,
+          text: newMessage.text,
+          image: newMessage.image,
+          timestamp: newMessage.timestamp
+        },
         debug: { method }
       });
     } catch (error) {
@@ -39,12 +71,20 @@ export default async function handler(req, res) {
     }
   } 
   else if (method === 'DELETE') {
-    messages = [];
-    return res.status(200).json({ 
-      ok: true,
-      message: 'Messages cleared',
-      debug: { method }
-    });
+    try {
+      await Message.deleteMany({});
+      return res.status(200).json({ 
+        ok: true,
+        message: 'Messages cleared',
+        debug: { method }
+      });
+    } catch (error) {
+      return res.status(500).json({ 
+        ok: false,
+        error: 'Failed to clear messages',
+        details: error.message
+      });
+    }
   } 
   else if (method === 'OPTIONS') {
     return res.status(200).end();
