@@ -34,7 +34,9 @@ export default function ChatPage() {
 
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
+    console.log('Initializing chat, user:', user);
     if (!user) {
+      console.log('No user found, redirecting to login');
       router.push('/');
       return;
     }
@@ -46,6 +48,7 @@ export default function ChatPage() {
       try {
         const res = await fetch('/api/messages');
         const data = await res.json();
+        console.log('Loaded messages:', data);
         setMessages(data);
       } catch (error) {
         console.error('Failed to load messages:', error);
@@ -63,6 +66,7 @@ export default function ChatPage() {
           // Only update if the count actually changed
           if (data.length !== lastMessageCount) {
             lastMessageCount = data.length;
+            console.log('Messages updated:', data.length);
             setMessages(data);
           }
         })
@@ -89,7 +93,17 @@ export default function ChatPage() {
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!inputValue.trim() && !preview) return;
+    
+    // Ensure currentUser is set
+    if (!currentUser) {
+      console.error('User not set');
+      return;
+    }
+    
+    if (!inputValue.trim() && !preview) {
+      console.log('No message or image to send');
+      return;
+    }
 
     const newMessage = {
       sender: currentUser,
@@ -98,13 +112,16 @@ export default function ChatPage() {
     };
 
     try {
+      console.log('Sending message:', newMessage);
       const res = await fetch('/api/messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newMessage)
       });
 
+      console.log('Response status:', res.status);
       if (res.ok) {
+        console.log('Message sent successfully');
         // Reload messages
         const messagesRes = await fetch('/api/messages');
         const updatedMessages = await messagesRes.json();
@@ -112,6 +129,8 @@ export default function ChatPage() {
         setInputValue('');
         setPreview('');
         if (fileInputRef.current) fileInputRef.current.value = '';
+      } else {
+        console.error('Failed to send message:', res.status);
       }
     } catch (error) {
       console.error('Failed to send message:', error);
