@@ -4,13 +4,34 @@
   box-sizing: border-box;
 }
 
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-html, body, #__next {
+#__next {
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
+
+/* Mobile viewport fix */
+@viewport {
+  width: device-width;
+  zoom: 1;
+}
+
+/* Prevent zoom on input focus for iOS */
+input, textarea, select {
+  font-size: 16px;
+  font-size: max(16px, 1em);
+}
+
