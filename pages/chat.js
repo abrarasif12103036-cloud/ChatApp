@@ -136,6 +136,9 @@ export default function ChatPage() {
     // Auto-refresh messages, typing status, and online status every 500ms
     let lastMessageCount = 0;
     const interval = setInterval(() => {
+      // Don't poll if user is not logged in
+      if (!user) return;
+
       // Fetch messages
       fetch('/api/messages')
         .then(res => res.json())
@@ -287,7 +290,18 @@ export default function ChatPage() {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // First, mark user as offline
+      await fetch('/api/online', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user })
+      });
+    } catch (error) {
+      console.error('Failed to mark user offline during logout:', error);
+    }
+    
     localStorage.removeItem('currentUser');
     router.push('/');
   };
