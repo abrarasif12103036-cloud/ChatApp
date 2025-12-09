@@ -390,3 +390,107 @@
 .messagesArea::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 212, 255, 0.5);
 }
+
+.headerLeft {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+.otherUserInfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(0, 212, 255, 0.1);
+  border-radius: 12px;
+  border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.otherUserName {
+  font-size: 13px;
+  font-weight: 600;
+  color: #00d4ff;
+}
+
+.statusIndicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.statusIndicator.online {
+  background: #22c55e;
+  box-shadow: 0 0 8px rgba(34, 197, 94, 0.6);
+}
+
+.statusIndicator.offline {
+  background: #ef4444;
+  opacity: 0.5;
+  animation: none;
+}
+
+.statusText {
+  font-size: 11px;
+  color: rgba(0, 212, 255, 0.8);
+  font-weight: 500;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
+.typingIndicator {
+  display: flex;
+  gap: 4px;
+  padding: 8px 12px;
+  align-items: flex-end;
+}
+
+.typingIndicator span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(10, 25, 47, 0.6);
+  animation: bounce 1.4s infinite;
+}
+
+.typingIndicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.typingIndicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  40% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+.messageFooter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 5px;
+}
+
+.readReceipt {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: -2px;
+}

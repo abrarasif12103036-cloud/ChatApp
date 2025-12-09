@@ -26,7 +26,8 @@ export default async function handler(req, res) {
           sender: msg.sender,
           text: msg.text,
           image: msg.image,
-          timestamp: msg.timestamp
+          timestamp: msg.timestamp,
+          isRead: msg.isRead
         })),
         debug: { method }
       });
@@ -58,7 +59,8 @@ export default async function handler(req, res) {
           sender: newMessage.sender,
           text: newMessage.text,
           image: newMessage.image,
-          timestamp: newMessage.timestamp
+          timestamp: newMessage.timestamp,
+          isRead: newMessage.isRead
         },
         debug: { method }
       });
@@ -86,6 +88,36 @@ export default async function handler(req, res) {
       });
     }
   } 
+  else if (method === 'PUT') {
+    // Mark messages as read
+    try {
+      const { recipientUser } = req.body;
+      
+      await Message.updateMany(
+        { sender: { $ne: recipientUser }, isRead: false },
+        { isRead: true }
+      );
+      
+      const messages = await Message.find().sort({ createdAt: 1 });
+      return res.status(200).json({ 
+        ok: true,
+        messages: messages.map(msg => ({
+          id: msg._id,
+          sender: msg.sender,
+          text: msg.text,
+          image: msg.image,
+          timestamp: msg.timestamp,
+          isRead: msg.isRead
+        }))
+      });
+    } catch (error) {
+      return res.status(500).json({ 
+        ok: false,
+        error: 'Failed to mark messages as read',
+        details: error.message
+      });
+    }
+  }
   else if (method === 'OPTIONS') {
     return res.status(200).end();
   }
@@ -94,7 +126,7 @@ export default async function handler(req, res) {
       ok: false,
       error: 'Method not allowed',
       received: method,
-      allowed: ['GET', 'POST', 'DELETE']
+      allowed: ['GET', 'POST', 'DELETE', 'PUT']
     });
   }
 }

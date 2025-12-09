@@ -11,10 +11,14 @@ export default function ChatPage() {
   const [preview, setPreview] = useState('');
   const [enlargedImage, setEnlargedImage] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isTyping, setIsTyping] = useState(false);
+  const [otherUserTyping, setOtherUserTyping] = useState(false);
+  const [onlineUsers, setOnlineUsers] = useState([]);
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
   const fileInputRef = useRef(null);
   const isUserScrolling = useRef(false);
+  const typingTimeoutRef = useRef(null);
 
   const scrollToBottom = () => {
     if (!isUserScrolling.current) {
@@ -31,6 +35,59 @@ export default function ChatPage() {
       element.scrollHeight - element.scrollTop - element.clientHeight < 100;
     
     isUserScrolling.current = !isNearBottom;
+  };
+
+  // Mark messages as read when user comes online
+  const markMessagesAsRead = async (user) => {
+    try {
+      const res = await fetch('/api/messages', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ recipientUser: user })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data.messages || []);
+      }
+    } catch (error) {
+      console.error('Failed to mark messages as read:', error);
+    }
+  };
+
+  // Update online status
+  const updateOnlineStatus = async (user) => {
+    try {
+      const res = await fetch('/api/online', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setOnlineUsers(data.onlineUsers || []);
+      }
+    } catch (error) {
+      console.error('Failed to update online status:', error);
+    }
+  };
+
+  // Handle typing indicator
+  const handleTyping = async (typing) => {
+    if (isTyping === typing) return;
+    
+    setIsTyping(typing);
+    
+    try {
+      await fetch('/api/typing', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: currentUser, isTyping: typing })
+      });
+    } catch (error) {
+      console.error('Failed to update typing status:', error);
+    }
   };
 
   useEffect(() => {
@@ -59,29 +116,70 @@ export default function ChatPage() {
 
     loadMessages();
 
-    // Auto-refresh every 500ms
+    // Update online status immediately
+    updateOnlineStatus(user);
+
+    // Auto-refresh messages, typing status, and online status every 500ms
     let lastMessageCount = 0;
     const interval = setInterval(() => {
+      // Fetch messages
       fetch('/api/messages')
         .then(res => res.json())
         .then(data => {
           const messagesList = data.messages || [];
-          // Only update if the count actually changed
-          if (messagesList.length !== lastMessageCount) {
-            lastMessageCount = messagesList.length;
-            console.log('Messages updated:', messagesList.length);
-            setMessages(messagesList);
+          setMessages(messagesList);
+          lastMessageCount = messagesList.length;
+          
+          // Mark unread messages from other user as read
+          const unreadMessages = messagesList.filter(msg => msg.sender !== user && !msg.isRead);
+          if (unreadMessages.length > 0) {
+            markMessagesAsRead(user);
           }
         })
         .catch(error => console.error('Failed to fetch messages:', error));
+
+      // Fetch typing status
+      fetch('/api/typing')
+        .then(res => res.json())
+        .then(data => {
+          const typingUsersList = data.typingUsers || [];
+          const otherIsTyping = typingUsersList.includes(user === 'Abrar' ? 'Mohona' : 'Abrar');
+          setOtherUserTyping(otherIsTyping);
+        })
+        .catch(error => console.error('Failed to fetch typing status:', error));
+
+      // Update online status
+      updateOnlineStatus(user);
     }, 500);
 
-    return () => clearInterval(interval);
+    // Handle window unload to mark user as offline
+    const handleBeforeUnload = async () => {
+      try {
+        await fetch('/api/online', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user })
+        });
+      } catch (error) {
+        console.error('Failed to mark user offline:', error);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      handleBeforeUnload();
+    };
   }, [router]);
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, otherUserTyping]);
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
@@ -94,8 +192,28 @@ export default function ChatPage() {
     reader.readAsDataURL(file);
   };
 
+  const handleInputChange = (e) => {
+    setInputValue(e.target.value);
+    
+    // Handle typing indicator
+    handleTyping(true);
+    
+    // Clear previous timeout
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    
+    // Set new timeout to stop typing after 1 second of inactivity
+    typingTimeoutRef.current = setTimeout(() => {
+      handleTyping(false);
+    }, 1000);
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
+    
+    // Stop typing indicator
+    handleTyping(false);
     
     // Ensure currentUser is set
     if (!currentUser) {
@@ -164,6 +282,8 @@ export default function ChatPage() {
     }
   };
 
+  const isOtherUserOnline = onlineUsers.includes(otherUser);
+
   if (!currentUser) {
     return <div className={styles.container}><div style={{ color: '#00d4ff', textAlign: 'center', paddingTop: '50px' }}>Loading...</div></div>;
   }
@@ -171,14 +291,21 @@ export default function ChatPage() {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h1 className={styles.title}>💬 Chat - {currentUser.charAt(0).toUpperCase() + currentUser.slice(1)}</h1>
+        <div className={styles.headerLeft}>
+          <h1 className={styles.title}>💬 Chat - {currentUser.charAt(0).toUpperCase() + currentUser.slice(1)}</h1>
+          <div className={styles.otherUserInfo}>
+            <span className={styles.otherUserName}>{otherUser}</span>
+            <div className={`${styles.statusIndicator} ${isOtherUserOnline ? styles.online : styles.offline}`} title={isOtherUserOnline ? 'Online' : 'Offline'}></div>
+            <span className={styles.statusText}>{isOtherUserOnline ? 'Online' : 'Offline'}</span>
+          </div>
+        </div>
         <div className={styles.buttons}>
           <button onClick={clearChat} className={styles.btnSecondary}>Clear</button>
           <button onClick={handleLogout} className={styles.btnLogout}>Logout</button>
         </div>
       </div>
 
-      <div className={styles.messagesArea}>
+      <div className={styles.messagesArea} ref={messagesAreaRef} onScroll={handleScroll}>
         {messages.length === 0 ? (
           <div className={styles.empty}>
             <p>📭 No messages yet. Start chatting!</p>
@@ -197,11 +324,31 @@ export default function ChatPage() {
                   />
                 )}
                 {msg.text !== '📷 Image' && <p className={styles.text}>{msg.text}</p>}
-                <span className={styles.time}>{msg.timestamp}</span>
+                <div className={styles.messageFooter}>
+                  <span className={styles.time}>{msg.timestamp}</span>
+                  {msg.sender === currentUser && (
+                    <span className={styles.readReceipt} title={msg.isRead ? 'Seen' : 'Sent'}>
+                      {msg.isRead ? '✓✓' : '✓'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           ))
         )}
+        
+        {otherUserTyping && (
+          <div className={`${styles.message} ${styles.other}`}>
+            <div className={styles.bubble}>
+              <div className={styles.typingIndicator}>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
@@ -250,7 +397,7 @@ export default function ChatPage() {
         <input
           type="text"
           value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
+          onChange={handleInputChange}
           placeholder="Type a message..."
           className={styles.inputField}
         />
@@ -259,3 +406,4 @@ export default function ChatPage() {
     </div>
   );
 }
+
