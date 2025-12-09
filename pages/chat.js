@@ -62,6 +62,7 @@ export default function ChatPage() {
       if (res.ok) {
         const data = await res.json();
         setMessages(data.messages || []);
+        return data;
       }
     } catch (error) {
       console.error('Failed to mark messages as read:', error);
@@ -146,7 +147,14 @@ export default function ChatPage() {
           // Mark unread messages from other user as read
           const unreadMessages = messagesList.filter(msg => msg.sender !== user && !msg.isRead);
           if (unreadMessages.length > 0) {
-            markMessagesAsRead(user);
+            markMessagesAsRead(user).then(() => {
+              // Fetch updated messages after marking as read
+              fetch('/api/messages')
+                .then(res => res.json())
+                .then(data => {
+                  setMessages(data.messages || []);
+                });
+            });
           }
         })
         .catch(error => console.error('Failed to fetch messages:', error));
