@@ -316,8 +316,12 @@ export default function ChatPage() {
           <h1 className={styles.title}>💬 Chat - {currentUser.charAt(0).toUpperCase() + currentUser.slice(1)}</h1>
           <div className={styles.otherUserInfo}>
             <span className={styles.otherUserName}>{otherUser}</span>
-            <div className={`${styles.statusIndicator} ${isOtherUserOnline ? styles.online : styles.offline}`} title={isOtherUserOnline ? 'Online' : 'Offline'}></div>
-            <span className={styles.statusText}>{isOtherUserOnline ? 'Online' : 'Offline'}</span>
+            {isOtherUserOnline && (
+              <>
+                <div className={`${styles.statusIndicator} ${styles.online}`} title="Online"></div>
+                <span className={styles.statusText}>Online</span>
+              </>
+            )}
           </div>
         </div>
         <div className={styles.buttons}>
