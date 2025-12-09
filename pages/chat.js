@@ -20,14 +20,16 @@ export default function ChatPage() {
   const isUserScrolling = useRef(false);
   const typingTimeoutRef = useRef(null);
 
-  // Format timestamp to local timezone
+  // Format timestamp to local timezone (GMT+6)
   const formatTime = (isoTimestamp) => {
     if (!isoTimestamp) return '';
     const date = new Date(isoTimestamp);
-    return date.toLocaleString('en-US', {
+    return date.toLocaleString('en-BD', {
       hour: '2-digit',
       minute: '2-digit',
-      hour12: true
+      second: '2-digit',
+      hour12: true,
+      timeZone: 'Asia/Dhaka'
     });
   };
 
