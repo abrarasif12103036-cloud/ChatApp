@@ -20,6 +20,17 @@ export default function ChatPage() {
   const isUserScrolling = useRef(false);
   const typingTimeoutRef = useRef(null);
 
+  // Format timestamp to local timezone
+  const formatTime = (isoTimestamp) => {
+    if (!isoTimestamp) return '';
+    const date = new Date(isoTimestamp);
+    return date.toLocaleString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   const scrollToBottom = () => {
     if (!isUserScrolling.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -325,7 +336,7 @@ export default function ChatPage() {
                 )}
                 {msg.text !== '📷 Image' && <p className={styles.text}>{msg.text}</p>}
                 <div className={styles.messageFooter}>
-                  <span className={styles.time}>{msg.timestamp}</span>
+                  <span className={styles.time}>{formatTime(msg.timestamp)}</span>
                   {msg.sender === currentUser && (
                     <span className={styles.readReceipt} title={msg.isRead ? 'Seen' : 'Sent'}>
                       {msg.isRead ? '✓✓' : '✓'}

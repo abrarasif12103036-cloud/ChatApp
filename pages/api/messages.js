@@ -47,7 +47,7 @@ export default async function handler(req, res) {
         sender: body.sender || 'Unknown',
         text: body.text || '',
         image: body.image || null,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        timestamp: new Date().toISOString()
       });
       
       await newMessage.save();
