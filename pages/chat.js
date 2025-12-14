@@ -19,6 +19,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const inputRef = useRef(null);
   const isUserScrolling = useRef(false);
   const typingTimeoutRef = useRef(null);
 
@@ -411,11 +412,7 @@ export default function ChatPage() {
         className={styles.messagesArea} 
         ref={messagesAreaRef} 
         onScroll={handleScroll}
-        onClick={(e) => {
-          if (e.target === messagesAreaRef.current) {
-            setShowReactionPicker(null);
-          }
-        }}
+        onClick={() => setShowReactionPicker(null)}
       >
         {messages.length === 0 ? (
           <div className={styles.empty}>
@@ -423,13 +420,16 @@ export default function ChatPage() {
           </div>
         ) : (
           messages.map((msg) => (
-            <div key={msg.id} className={`${styles.message} ${msg.sender === currentUser ? styles.own : styles.other}`}>
+            <div key={msg.id} data-message-id={msg.id.toString()} className={`${styles.message} ${msg.sender === currentUser ? styles.own : styles.other}`}>
               {msg.sender === currentUser && (
                 <div className={styles.messageMenuContainer}>
                   <button
                     type="button"
                     className={styles.menuButton}
-                    onClick={() => setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id);
+                    }}
                     title="More options"
                   >
                     ...
@@ -445,6 +445,7 @@ export default function ChatPage() {
                         onClick={() => {
                           setReplyingTo(msg);
                           setShowReactionPicker(null);
+                          setTimeout(() => inputRef.current?.focus(), 0);
                         }}
                         title="Reply to this message"
                       >
@@ -458,6 +459,7 @@ export default function ChatPage() {
                             e.preventDefault();
                             e.stopPropagation();
                             handleReaction(msg.id, 'Black Love');
+                            setShowReactionPicker(null);
                           }}
                           title="Black Love"
                         >
@@ -470,6 +472,7 @@ export default function ChatPage() {
                             e.preventDefault();
                             e.stopPropagation();
                             handleReaction(msg.id, 'Haha');
+                            setShowReactionPicker(null);
                           }}
                           title="Haha"
                         >
@@ -482,6 +485,7 @@ export default function ChatPage() {
                             e.preventDefault();
                             e.stopPropagation();
                             handleReaction(msg.id, 'Sad');
+                            setShowReactionPicker(null);
                           }}
                           title="Sad"
                         >
@@ -494,6 +498,7 @@ export default function ChatPage() {
                             e.preventDefault();
                             e.stopPropagation();
                             handleReaction(msg.id, 'Like');
+                            setShowReactionPicker(null);
                           }}
                           title="Like"
                         >
@@ -506,6 +511,7 @@ export default function ChatPage() {
                             e.preventDefault();
                             e.stopPropagation();
                             handleReaction(msg.id, 'Unlike');
+                            setShowReactionPicker(null);
                           }}
                           title="Unlike"
                         >
@@ -518,10 +524,25 @@ export default function ChatPage() {
               )}
               <div className={styles.bubble}>
                 {msg.replyTo && msg.replyTo.sender && (
-                  <div className={styles.replyReference}>
+                  <div 
+                    className={styles.replyReference}
+                    onClick={() => {
+                      // Find the original message by matching sender and text
+                      const originalMsg = messages.find(m => 
+                        m.sender === msg.replyTo.sender && m.text === msg.replyTo.text
+                      );
+                      if (originalMsg) {
+                        const element = document.querySelector(`[data-message-id="${originalMsg.id.toString()}"]`);
+                        if (element) {
+                          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }
+                    }}
+                    style={{ cursor: 'pointer' }}
+                  >
                     <div className={styles.replyQuote}>
                       <p className={styles.replyAuthor}>↳ {msg.replyTo.sender}</p>
-                      {msg.replyTo.image && <span className={styles.replyIcon}>🖼️</span>}
+                      {msg.replyTo.image && <img src={msg.replyTo.image} alt="reply" style={{ maxWidth: '60px', maxHeight: '60px', borderRadius: '4px', marginTop: '4px' }} />}
                       <p className={styles.replyText}>"{msg.replyTo.text}"</p>
                     </div>
                   </div>
@@ -547,9 +568,13 @@ export default function ChatPage() {
                 {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                   <div className={styles.reactionsDisplay}>
                     {Object.entries(msg.reactions).map(([emoji, users]) => (
-                      <div key={emoji} className={styles.reactionBadge} title={users.join(', ')}>
+                      <div 
+                        key={emoji} 
+                        className={`${styles.reactionBadge} ${msg.sender === currentUser ? styles.reactionBadgeOwn : ''}`}
+                        title={users.join(', ')}
+                      >
                         <span>{emoji}</span>
-                        <span className={styles.reactionCount}>{users.length}</span>
+                        <span className={`${styles.reactionCount} ${msg.sender === currentUser ? styles.reactionCountOwn : ''}`}>{users.length}</span>
                       </div>
                     ))}
                   </div>
@@ -560,7 +585,10 @@ export default function ChatPage() {
                   <button
                     type="button"
                     className={styles.menuButton}
-                    onClick={() => setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id);
+                    }}
                     title="More options"
                   >
                     ...
@@ -576,6 +604,7 @@ export default function ChatPage() {
                       onClick={() => {
                         setReplyingTo(msg);
                         setShowReactionPicker(null);
+                        setTimeout(() => inputRef.current?.focus(), 0);
                       }}
                       title="Reply to this message"
                     >
@@ -589,6 +618,7 @@ export default function ChatPage() {
                           e.preventDefault();
                           e.stopPropagation();
                           handleReaction(msg.id, 'Black Love');
+                          setShowReactionPicker(null);
                         }}
                         title="Black Love"
                       >
@@ -601,6 +631,7 @@ export default function ChatPage() {
                           e.preventDefault();
                           e.stopPropagation();
                           handleReaction(msg.id, 'Haha');
+                          setShowReactionPicker(null);
                         }}
                         title="Haha"
                       >
@@ -613,6 +644,7 @@ export default function ChatPage() {
                           e.preventDefault();
                           e.stopPropagation();
                           handleReaction(msg.id, 'Sad');
+                          setShowReactionPicker(null);
                         }}
                         title="Sad"
                       >
@@ -625,6 +657,7 @@ export default function ChatPage() {
                           e.preventDefault();
                           e.stopPropagation();
                           handleReaction(msg.id, 'Like');
+                          setShowReactionPicker(null);
                         }}
                         title="Like"
                       >
@@ -637,6 +670,7 @@ export default function ChatPage() {
                           e.preventDefault();
                           e.stopPropagation();
                           handleReaction(msg.id, 'Unlike');
+                          setShowReactionPicker(null);
                         }}
                         title="Unlike"
                       >
@@ -727,6 +761,7 @@ export default function ChatPage() {
           )}
           
           <input
+            ref={inputRef}
             type="text"
             value={inputValue}
             onChange={handleInputChange}
