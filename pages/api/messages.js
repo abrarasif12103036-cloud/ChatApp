@@ -27,9 +27,10 @@ export default async function handler(req, res) {
           text: msg.text,
           image: msg.image,
           timestamp: msg.timestamp,
-          isRead: msg.isRead
-        })),
-        debug: { method }
+          isRead: msg.isRead,
+          replyTo: msg.replyTo,
+          reactions: msg.reactions || {}
+        }))
       });
     } catch (error) {
       return res.status(500).json({ 
@@ -43,13 +44,15 @@ export default async function handler(req, res) {
     try {
       const body = req.body || {};
       
-      const newMessage = new Message({
+      const messageData = {
         sender: body.sender || 'Unknown',
         text: body.text || '',
         image: body.image || null,
-        timestamp: new Date().toISOString()
-      });
+        timestamp: new Date().toISOString(),
+        replyTo: body.replyTo || null
+      };
       
+      const newMessage = new Message(messageData);
       await newMessage.save();
       
       return res.status(201).json({ 
@@ -60,9 +63,10 @@ export default async function handler(req, res) {
           text: newMessage.text,
           image: newMessage.image,
           timestamp: newMessage.timestamp,
-          isRead: newMessage.isRead
-        },
-        debug: { method }
+          isRead: newMessage.isRead,
+          replyTo: newMessage.replyTo,
+          reactions: newMessage.reactions || {}
+        }
       });
     } catch (error) {
       return res.status(500).json({ 
@@ -77,8 +81,7 @@ export default async function handler(req, res) {
       await Message.deleteMany({});
       return res.status(200).json({ 
         ok: true,
-        message: 'Messages cleared',
-        debug: { method }
+        message: 'Messages cleared'
       });
     } catch (error) {
       return res.status(500).json({ 
@@ -106,8 +109,10 @@ export default async function handler(req, res) {
           sender: msg.sender,
           text: msg.text,
           image: msg.image,
+          replyTo: msg.replyTo || null,
           timestamp: msg.timestamp,
-          isRead: msg.isRead
+          isRead: msg.isRead,
+          reactions: msg.reactions || {}
         }))
       });
     } catch (error) {

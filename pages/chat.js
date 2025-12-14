@@ -14,6 +14,8 @@ export default function ChatPage() {
   const [isTyping, setIsTyping] = useState(false);
   const [otherUserTyping, setOtherUserTyping] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
+  const [replyingTo, setReplyingTo] = useState(null);
+  const [showReactionPicker, setShowReactionPicker] = useState(null);
   const messagesEndRef = useRef(null);
   const messagesAreaRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -65,7 +67,7 @@ export default function ChatPage() {
         return data;
       }
     } catch (error) {
-      console.error('Failed to mark messages as read:', error);
+      // Silently ignore network errors
     }
   };
 
@@ -83,7 +85,7 @@ export default function ChatPage() {
         setOnlineUsers(data.onlineUsers || []);
       }
     } catch (error) {
-      console.error('Failed to update online status:', error);
+      // Silently ignore network errors - connection will be restored automatically
     }
   };
 
@@ -100,7 +102,7 @@ export default function ChatPage() {
         body: JSON.stringify({ user: currentUser, isTyping: typing })
       });
     } catch (error) {
-      console.error('Failed to update typing status:', error);
+      // Silently ignore network errors - typing indicator is not critical
     }
   };
 
@@ -121,7 +123,7 @@ export default function ChatPage() {
       try {
         const res = await fetch('/api/messages');
         const data = await res.json();
-        console.log('Loaded messages:', data);
+        console.log('Loaded messages from API:', JSON.stringify(data.messages, null, 2));
         setMessages(data.messages || []);
       } catch (error) {
         console.error('Failed to load messages:', error);
@@ -133,8 +135,10 @@ export default function ChatPage() {
     // Update online status immediately
     updateOnlineStatus(user);
 
-    // Auto-refresh messages, typing status, and online status every 500ms
-    let lastMessageCount = 0;
+    // Auto-refresh messages, typing status every 1000ms (reduced frequency to prevent blinking)
+    let lastMessages = JSON.stringify([]);
+    let lastTypingState = false;
+    
     const interval = setInterval(() => {
       // Don't poll if user is not logged in
       if (!user) return;
@@ -144,23 +148,21 @@ export default function ChatPage() {
         .then(res => res.json())
         .then(data => {
           const messagesList = data.messages || [];
-          setMessages(messagesList);
-          lastMessageCount = messagesList.length;
+          const messagesStr = JSON.stringify(messagesList);
           
-          // Mark unread messages from other user as read
+          // Only update if messages actually changed
+          if (messagesStr !== lastMessages) {
+            setMessages(messagesList);
+            lastMessages = messagesStr;
+          }
+          
+          // Mark unread messages from other user as read (do this silently without re-fetch)
           const unreadMessages = messagesList.filter(msg => msg.sender !== user && !msg.isRead);
           if (unreadMessages.length > 0) {
-            markMessagesAsRead(user).then(() => {
-              // Fetch updated messages after marking as read
-              fetch('/api/messages')
-                .then(res => res.json())
-                .then(data => {
-                  setMessages(data.messages || []);
-                });
-            });
+            markMessagesAsRead(user);
           }
         })
-        .catch(error => console.error('Failed to fetch messages:', error));
+        .catch(() => {}); // Silently ignore network errors
 
       // Fetch typing status
       fetch('/api/typing')
@@ -168,13 +170,20 @@ export default function ChatPage() {
         .then(data => {
           const typingUsersList = data.typingUsers || [];
           const otherIsTyping = typingUsersList.includes(user === 'Abrar' ? 'Mohona' : 'Abrar');
-          setOtherUserTyping(otherIsTyping);
+          
+          // Only update if typing state changed
+          if (otherIsTyping !== lastTypingState) {
+            setOtherUserTyping(otherIsTyping);
+            lastTypingState = otherIsTyping;
+          }
         })
-        .catch(error => console.error('Failed to fetch typing status:', error));
+        .catch(() => {}); // Silently ignore network errors
+    }, 1000);
 
-      // Update online status
-      updateOnlineStatus(user);
-    }, 500);
+    // Update online status every 5 seconds (less frequent)
+    const onlineInterval = setInterval(() => {
+      if (user) updateOnlineStatus(user);
+    }, 5000);
 
     // Handle window unload to mark user as offline
     const handleBeforeUnload = async () => {
@@ -193,6 +202,7 @@ export default function ChatPage() {
 
     return () => {
       clearInterval(interval);
+      clearInterval(onlineInterval);
       window.removeEventListener('beforeunload', handleBeforeUnload);
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -233,6 +243,46 @@ export default function ChatPage() {
     }, 1000);
   };
 
+  const handleReaction = async (messageId, reaction) => {
+    try {
+      console.log('handleReaction called:', { messageId, reaction, user: currentUser });
+      
+      const res = await fetch('/api/reactions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messageId: messageId.toString(),
+          user: currentUser,
+          reaction
+        })
+      });
+
+      console.log('Reaction response status:', res.status);
+      
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Reaction response data:', data);
+        console.log('Message from response:', data.message);
+        console.log('Reactions in response:', data.message?.reactions);
+        
+        if (data.ok && data.message) {
+          setMessages(messages.map(msg =>
+            msg.id.toString() === messageId.toString() ? data.message : msg
+          ));
+          // Force a log of updated messages
+          setTimeout(() => {
+            console.log('Messages after update:', messages);
+          }, 100);
+        }
+      } else {
+        const error = await res.json();
+        console.error('Reaction error:', error);
+      }
+    } catch (error) {
+      console.error('Reaction exception:', error);
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     
@@ -253,10 +303,15 @@ export default function ChatPage() {
       const newMessage = {
         sender: currentUser,
         text: inputValue || '📷 Image',
-        image: preview || null
+        image: preview || null,
+        replyTo: replyingTo ? {
+          sender: replyingTo.sender,
+          text: replyingTo.text,
+          image: replyingTo.image
+        } : null
       };
 
-      console.log('Sending message:', newMessage);
+      console.log('Sending message with replyTo:', newMessage);
       
       const res = await fetch('/api/messages', {
         method: 'POST',
@@ -272,16 +327,25 @@ export default function ChatPage() {
 
       console.log('Message sent successfully');
       
-      // Clear input immediately
+      // Clear input and reply
       setInputValue('');
       setPreview('');
+      setReplyingTo(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       
       // Reload messages from API
       const messagesRes = await fetch('/api/messages');
       if (messagesRes.ok) {
         const data = await messagesRes.json();
-        console.log('Updated messages:', data);
+        console.log('All messages from API:', JSON.stringify(data.messages, null, 2));
+        data.messages.forEach((msg, idx) => {
+          console.log(`Message ${idx}:`, {
+            sender: msg.sender,
+            text: msg.text,
+            hasReplyTo: !!msg.replyTo,
+            replyTo: msg.replyTo
+          });
+        });
         setMessages(data.messages || []);
       }
     } catch (error) {
@@ -344,7 +408,16 @@ export default function ChatPage() {
         </div>
       </div>
 
-      <div className={styles.messagesArea} ref={messagesAreaRef} onScroll={handleScroll}>
+      <div 
+        className={styles.messagesArea} 
+        ref={messagesAreaRef} 
+        onScroll={handleScroll}
+        onClick={(e) => {
+          if (e.target === messagesAreaRef.current) {
+            setShowReactionPicker(null);
+          }
+        }}
+      >
         {messages.length === 0 ? (
           <div className={styles.empty}>
             <p>📭 No messages yet. Start chatting!</p>
@@ -352,7 +425,108 @@ export default function ChatPage() {
         ) : (
           messages.map((msg) => (
             <div key={msg.id} className={`${styles.message} ${msg.sender === currentUser ? styles.own : styles.other}`}>
+              {msg.sender === currentUser && (
+                <div className={styles.messageMenuContainer}>
+                  <button
+                    type="button"
+                    className={styles.menuButton}
+                    onClick={() => setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id)}
+                    title="More options"
+                  >
+                    ...
+                  </button>
+                  {showReactionPicker === msg.id && (
+                    <div 
+                      className={`${styles.actionMenu} ${styles.leftMenu}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <button 
+                        type="button"
+                        className={styles.replyAction}
+                        onClick={() => {
+                          setReplyingTo(msg);
+                          setShowReactionPicker(null);
+                        }}
+                        title="Reply to this message"
+                      >
+                        ↩ Reply
+                      </button>
+                      <div className={styles.reactionPicker}>
+                        <button
+                          type="button"
+                          className={styles.reactionOption}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleReaction(msg.id, 'Black Love');
+                          }}
+                          title="Black Love"
+                        >
+                          🖤
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.reactionOption}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleReaction(msg.id, 'Haha');
+                          }}
+                          title="Haha"
+                        >
+                          😂
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.reactionOption}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleReaction(msg.id, 'Sad');
+                          }}
+                          title="Sad"
+                        >
+                          😢
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.reactionOption}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleReaction(msg.id, 'Like');
+                          }}
+                          title="Like"
+                        >
+                          👍
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.reactionOption}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleReaction(msg.id, 'Unlike');
+                          }}
+                          title="Unlike"
+                        >
+                          👎
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               <div className={styles.bubble}>
+                {msg.replyTo && msg.replyTo.sender && (
+                  <div className={styles.replyReference}>
+                    <div className={styles.replyQuote}>
+                      <p className={styles.replyAuthor}>↳ {msg.replyTo.sender}</p>
+                      {msg.replyTo.image && <span className={styles.replyIcon}>🖼️</span>}
+                      <p className={styles.replyText}>"{msg.replyTo.text}"</p>
+                    </div>
+                  </div>
+                )}
                 {msg.image && (
                   <img 
                     src={msg.image} 
@@ -371,7 +545,109 @@ export default function ChatPage() {
                     </span>
                   )}
                 </div>
+                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                  <div className={styles.reactionsDisplay}>
+                    {Object.entries(msg.reactions).map(([emoji, users]) => (
+                      <div key={emoji} className={styles.reactionBadge} title={users.join(', ')}>
+                        <span>{emoji}</span>
+                        <span className={styles.reactionCount}>{users.length}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
+              {msg.sender !== currentUser && (
+                <div className={styles.messageMenuContainer}>
+                  <button
+                    type="button"
+                    className={styles.menuButton}
+                    onClick={() => setShowReactionPicker(showReactionPicker === msg.id ? null : msg.id)}
+                    title="More options"
+                  >
+                    ...
+                  </button>
+                  {showReactionPicker === msg.id && (
+                    <div 
+                      className={`${styles.actionMenu} ${styles.rightMenu}`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                    <button 
+                      type="button"
+                      className={styles.replyAction}
+                      onClick={() => {
+                        setReplyingTo(msg);
+                        setShowReactionPicker(null);
+                      }}
+                      title="Reply to this message"
+                    >
+                      ↩ Reply
+                    </button>
+                    <div className={styles.reactionPicker}>
+                      <button
+                        type="button"
+                        className={styles.reactionOption}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleReaction(msg.id, 'Black Love');
+                        }}
+                        title="Black Love"
+                      >
+                        🖤
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.reactionOption}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleReaction(msg.id, 'Haha');
+                        }}
+                        title="Haha"
+                      >
+                        😂
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.reactionOption}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleReaction(msg.id, 'Sad');
+                        }}
+                        title="Sad"
+                      >
+                        😢
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.reactionOption}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleReaction(msg.id, 'Like');
+                        }}
+                        title="Like"
+                      >
+                        👍
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.reactionOption}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleReaction(msg.id, 'Unlike');
+                        }}
+                        title="Unlike"
+                      >
+                        👎
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              )}
             </div>
           ))
         )}
@@ -406,41 +682,60 @@ export default function ChatPage() {
       )}
 
       <form onSubmit={handleSendMessage} className={styles.inputArea}>
-        <input
-          type="file"
-          accept="image/*"
-          onChange={handleImageSelect}
-          className={styles.fileInput}
-          ref={fileInputRef}
-        />
-        <button type="button" onClick={() => fileInputRef.current?.click()} className={styles.imgBtn} title="Add image">
-          +
-        </button>
-        
-        {preview && (
-          <div className={styles.previewContainer}>
-            <img src={preview} alt="preview" className={styles.previewImg} />
+        {replyingTo && (
+          <div className={styles.replyingToContainer}>
+            <div className={styles.replyingToPreview}>
+              <p className={styles.replyingToLabel}>Replying to <strong>{replyingTo.sender}</strong></p>
+              <p className={styles.replyingToText}>{replyingTo.text}</p>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                setPreview('');
-                fileInputRef.current.value = '';
-              }}
-              className={styles.removePreview}
+              onClick={() => setReplyingTo(null)}
+              className={styles.cancelReplyBtn}
+              title="Cancel reply"
             >
               ✕
             </button>
           </div>
         )}
         
-        <input
-          type="text"
-          value={inputValue}
-          onChange={handleInputChange}
-          placeholder="Type a message..."
-          className={styles.inputField}
-        />
-        <button type="submit" className={styles.sendBtn}>Send</button>
+        <div className={styles.inputControls}>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageSelect}
+            className={styles.fileInput}
+            ref={fileInputRef}
+          />
+          <button type="button" onClick={() => fileInputRef.current?.click()} className={styles.imgBtn} title="Add image">
+            +
+          </button>
+          
+          {preview && (
+            <div className={styles.previewContainer}>
+              <img src={preview} alt="preview" className={styles.previewImg} />
+              <button
+                type="button"
+                onClick={() => {
+                  setPreview('');
+                  fileInputRef.current.value = '';
+                }}
+                className={styles.removePreview}
+              >
+                ✕
+              </button>
+            </div>
+          )}
+          
+          <input
+            type="text"
+            value={inputValue}
+            onChange={handleInputChange}
+            placeholder="Type a message..."
+            className={styles.inputField}
+          />
+          <button type="submit" className={styles.sendBtn}>Send</button>
+        </div>
       </form>
     </div>
   );
