@@ -508,7 +508,7 @@ export default function ChatPage() {
                         }}
                         title="Delete this message"
                       >
-                        🗑 Delete
+                        Delete
                       </button>
                       <div className={styles.reactionPicker}>
                         <button
