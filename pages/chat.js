@@ -284,6 +284,45 @@ export default function ChatPage() {
     }
   };
 
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      const confirmDelete = window.confirm('Are you sure you want to delete this message?');
+      if (!confirmDelete) return;
+
+      console.log('Deleting message:', { messageId, currentUser });
+
+      const res = await fetch('/api/messages', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messageId: messageId.toString(),
+          user: currentUser
+        })
+      });
+
+      console.log('Delete response status:', res.status);
+
+      if (res.ok) {
+        const data = await res.json();
+        console.log('Delete successful:', data);
+        // Mark message as deleted in local state
+        setMessages(messages.map(msg => 
+          msg.id.toString() === messageId.toString() 
+            ? { ...msg, isDeleted: true, text: 'This message was deleted' }
+            : msg
+        ));
+        setShowReactionPicker(null);
+      } else {
+        const error = await res.json();
+        console.error('Delete failed:', error);
+        alert('Failed to delete message: ' + (error.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      alert('Error deleting message');
+    }
+  };
+
   const handleSendMessage = async (e) => {
     e.preventDefault();
     
@@ -451,6 +490,16 @@ export default function ChatPage() {
                       >
                         ↩ Reply
                       </button>
+                      <button 
+                        type="button"
+                        className={styles.deleteAction}
+                        onClick={() => {
+                          handleDeleteMessage(msg.id);
+                        }}
+                        title="Delete this message"
+                      >
+                        🗑 Delete
+                      </button>
                       <div className={styles.reactionPicker}>
                         <button
                           type="button"
@@ -556,7 +605,11 @@ export default function ChatPage() {
                     style={{ cursor: 'pointer' }}
                   />
                 )}
-                {msg.text !== '📷 Image' && <p className={styles.text}>{msg.text}</p>}
+                {msg.text !== '📷 Image' && (
+                  <p className={msg.isDeleted ? styles.deletedText : styles.text}>
+                    {msg.isDeleted ? '(This message was deleted)' : msg.text}
+                  </p>
+                )}
                 <div className={styles.messageFooter}>
                   <span className={styles.time}>{formatTime(msg.timestamp)}</span>
                   {msg.sender === currentUser && (

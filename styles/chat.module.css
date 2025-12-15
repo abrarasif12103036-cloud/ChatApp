@@ -153,9 +153,24 @@
   color: #0a192f;
 }
 
+.deletedText {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0;
+  color: #0a192f;
+  opacity: 0.5;
+  font-style: italic;
+}
+
 .own .text {
   color: white;
   font-weight: 500;
+}
+
+.own .deletedText {
+  color: white;
+  opacity: 0.4;
+  font-style: italic;
 }
 
 .time {
@@ -779,6 +794,23 @@
 .replyAction:hover {
   background: rgba(0, 212, 255, 0.1);
   border-color: rgba(0, 212, 255, 0.6);
+}
+
+.deleteAction {
+  background: transparent;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  color: #ff4444;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.deleteAction:hover {
+  background: rgba(255, 68, 68, 0.1);
+  border-color: rgba(255, 68, 68, 0.6);
 }
 
 .reactionToggle {
