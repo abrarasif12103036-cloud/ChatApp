@@ -18,12 +18,24 @@ export default function LoginPage() {
     const validGirlUser = process.env.NEXT_PUBLIC_GIRL_USER;
     const validGirlPass = process.env.NEXT_PUBLIC_GIRL_PASS;
     
+    console.log('Login attempt:');
+    console.log('Entered username:', username);
+    console.log('Entered password:', password);
+    console.log('Valid credentials - Boy:', validBoyUser, '/', validBoyPass);
+    console.log('Valid credentials - Girl:', validGirlUser, '/', validGirlPass);
+    console.log('Username match Abrar?', username === validBoyUser);
+    console.log('Password match Abrarasif?', password === validBoyPass);
+    console.log('Username match Mohona?', username === validGirlUser);
+    console.log('Password match Mohona2024?', password === validGirlPass);
+    
     if ((username === validBoyUser && password === validBoyPass) || 
         (username === validGirlUser && password === validGirlPass)) {
+      console.log('✅ LOGIN SUCCESS! User:', username);
       localStorage.setItem('currentUser', username);
       setLoading(true);
       setTimeout(() => router.push('/chat'), 500);
     } else {
+      console.log('❌ LOGIN FAILED! Invalid credentials');
       setError('Invalid username or password. Please try again.');
     }
   };
