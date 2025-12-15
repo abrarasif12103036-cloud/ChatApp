@@ -247,12 +247,22 @@ export default function ChatPage() {
   }, [messages, otherUserTyping]);
 
   const handleImageSelect = (e) => {
+    console.log('handleImageSelect triggered');
     const file = e.target.files[0];
-    if (!file) return;
+    console.log('File selected:', file);
+    if (!file) {
+      console.warn('No file selected');
+      return;
+    }
 
+    console.log('File details:', { name: file.name, size: file.size, type: file.type });
     const reader = new FileReader();
     reader.onload = (event) => {
+      console.log('FileReader onload triggered');
       setPreview(event.target.result);
+    };
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
     };
     reader.readAsDataURL(file);
   };
@@ -769,8 +779,22 @@ export default function ChatPage() {
             onChange={handleImageSelect}
             className={styles.fileInput}
             ref={fileInputRef}
+            capture="environment"
           />
-          <button type="button" onClick={() => fileInputRef.current?.click()} className={styles.imgBtn} title="Add image">
+          <button 
+            type="button" 
+            onClick={(e) => {
+              e.preventDefault();
+              console.log('+ button clicked, fileInputRef:', fileInputRef.current);
+              if (fileInputRef.current) {
+                fileInputRef.current.click();
+              } else {
+                console.error('fileInputRef is not available');
+              }
+            }} 
+            className={styles.imgBtn} 
+            title="Add image"
+          >
             +
           </button>
           
