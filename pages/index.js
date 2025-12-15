@@ -31,8 +31,8 @@ export default function LoginPage() {
   return (
     <div className={styles.container}>
       <div className={styles.box}>
-        <h1 className={styles.title}>💬 Chat</h1>
-        <p className={styles.subtitle}>FOR US</p>
+        <h1 className={styles.title}>💬 <i>Mohona and Abrar</i></h1>
+        <p className={styles.subtitle}>Depicts the affection and love Abrar holds</p>
 
         <form onSubmit={handleLogin} className={styles.form}>
           <input
