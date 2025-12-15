@@ -421,6 +421,18 @@ export default function ChatPage() {
     }
   };
 
+  const handleReload = async () => {
+    try {
+      const res = await fetch('/api/messages');
+      const data = await res.json();
+      if (data.ok) {
+        setMessages(data.messages);
+      }
+    } catch (error) {
+      console.error('Failed to reload messages:', error);
+    }
+  };
+
   const isOtherUserOnline = onlineUsers.includes(otherUser);
 
   if (!currentUser) {
@@ -443,6 +455,7 @@ export default function ChatPage() {
         </div>
         <div className={styles.buttons}>
           <button onClick={clearChat} className={styles.btnSecondary}>Clear</button>
+          <button onClick={handleReload} className={styles.btnReload} title="Reload messages">↻</button>
           <button onClick={handleLogout} className={styles.btnLogout}>Logout</button>
         </div>
       </div>

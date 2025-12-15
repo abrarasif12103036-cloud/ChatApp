@@ -59,6 +59,29 @@
   transform: translateY(-2px);
 }
 
+.btnReload {
+  background: transparent;
+  border: 1.5px solid rgba(0, 200, 255, 0.6);
+  color: #00d4ff;
+  padding: 6px 10px;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: bold;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btnReload:hover {
+  border-color: rgba(0, 255, 255, 0.9);
+  box-shadow: 0 0 12px rgba(0, 212, 255, 0.6), inset 0 0 10px rgba(0, 212, 255, 0.2);
+  animation: spinReload 0.6s ease-in-out;
+}
+
 .btnLogout {
   padding: 6px 12px;
   background: linear-gradient(135deg, #00d4ff 0%, #0099ff 100%);
@@ -676,7 +699,14 @@
 }
 
 /* Mobile Responsive Styles */
-@media (max-width: 768px) {
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
   .bubble {
     max-width: 85%;
   }
@@ -921,5 +951,14 @@
   font-size: 12px;
   color: #00d4ff;
   font-weight: 600;
+}
+
+@keyframes spinReload {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
