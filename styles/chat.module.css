@@ -707,43 +707,43 @@
     transform: rotate(360deg);
   }
 }
-  .bubble {
-    max-width: 85%;
-  }
 
-  .replyReference {
-    padding: 10px;
-    margin-bottom: 10px;
-    font-size: 12px;
-    border-left: 4px solid #00d4ff;
-  }
+.bubble {
+  max-width: 85%;
+}
 
-  .replyAuthor {
-    font-size: 11px;
-  }
+.replyReference {
+  padding: 10px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  border-left: 4px solid #00d4ff;
+}
 
-  .replyText {
-    padding: 6px 8px;
-    font-size: 13px;
-  }
+.replyAuthor {
+  font-size: 11px;
+}
 
-  .text {
-    font-size: 14px;
-  }
+.replyText {
+  padding: 6px 8px;
+  font-size: 13px;
+}
 
-  .menuBtn {
-    font-size: 18px;
-    padding: 2px 6px;
-  }
+.text {
+  font-size: 14px;
+}
 
-  .menuItem {
-    padding: 10px 14px;
-    font-size: 13px;
-  }
+.menuBtn {
+  font-size: 18px;
+  padding: 2px 6px;
+}
 
-  .dropdownMenu {
-    min-width: 140px;
-  }
+.menuItem {
+  padding: 10px 14px;
+  font-size: 13px;
+}
+
+.dropdownMenu {
+  min-width: 140px;
 }
 
 .messageMenuContainer {

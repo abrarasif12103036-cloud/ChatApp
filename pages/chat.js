@@ -421,16 +421,8 @@ export default function ChatPage() {
     }
   };
 
-  const handleReload = async () => {
-    try {
-      const res = await fetch('/api/messages');
-      const data = await res.json();
-      if (data.ok) {
-        setMessages(data.messages);
-      }
-    } catch (error) {
-      console.error('Failed to reload messages:', error);
-    }
+  const handleReload = () => {
+    window.location.reload();
   };
 
   const isOtherUserOnline = onlineUsers.includes(otherUser);
