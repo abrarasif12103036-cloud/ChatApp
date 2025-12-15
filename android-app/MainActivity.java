@@ -54,9 +54,6 @@ public class MainActivity extends AppCompatActivity {
             webSettings.setAllowContentAccess(true);
             webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);  // Disable caching
 
-            // Add JavaScript interface for native notifications
-            webView.addJavascriptInterface(new NotificationBridge(this), "AndroidNotification");
-
             // Set WebViewClient with error handling
             webView.setWebViewClient(new WebViewClient() {
                 @Override
@@ -70,6 +67,9 @@ public class MainActivity extends AppCompatActivity {
                     Toast.makeText(MainActivity.this, "Error: " + description, Toast.LENGTH_SHORT).show();
                 }
             });
+
+            // Add JavaScript interface for native notifications - MUST be before loadUrl
+            webView.addJavascriptInterface(new NotificationBridge(this), "AndroidNotification");
 
             // Load production Vercel app
             webView.loadUrl("https://chern-pryp.vercel.app/chat");
