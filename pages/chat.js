@@ -294,6 +294,9 @@ export default function ChatPage() {
       const confirmDelete = window.confirm('Are you sure you want to delete this message?');
       if (!confirmDelete) return;
 
+      // Close the menu immediately after confirmation
+      setShowReactionPicker(null);
+
       console.log('Deleting message:', { messageId, currentUser });
 
       const res = await fetch('/api/messages', {
