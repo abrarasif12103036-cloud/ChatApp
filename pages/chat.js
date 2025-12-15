@@ -148,6 +148,7 @@ export default function ChatPage() {
     let lastMessages = JSON.stringify([]);
     let lastTypingState = false;
     let lastMessageCount = 0;
+    let notifiedMessageIds = new Set();
     
     const interval = setInterval(() => {
       // Don't poll if user is not logged in
@@ -162,20 +163,36 @@ export default function ChatPage() {
           
           // Only update if messages actually changed
           if (messagesStr !== lastMessages) {
+            console.log('Messages changed! Old count:', lastMessageCount, 'New count:', messagesList.length);
+            
             // Check if new messages arrived from other user
             const newMessageCount = messagesList.length;
             const otherUserName = user === 'Abrar' ? 'Mohona' : 'Abrar';
             
             if (newMessageCount > lastMessageCount) {
+              console.log('New messages detected! Difference:', newMessageCount - lastMessageCount);
+              
               // Get the new messages from other user
               const newMessages = messagesList.slice(lastMessageCount);
+              console.log('New messages slice:', newMessages.length, 'messages');
+              
               const otherUserNewMessages = newMessages.filter(msg => msg.sender === otherUserName);
+              console.log('New messages from', otherUserName + ':', otherUserNewMessages.length);
               
               // Send notifications for each new message
               otherUserNewMessages.forEach(msg => {
-                const preview = msg.text || (msg.image ? '[Image]' : '[Message]');
-                NotificationHandler.notifyNewMessage(otherUserName, preview);
+                const msgId = msg.id || msg._id;
+                if (!notifiedMessageIds.has(msgId)) {
+                  console.log('Sending notification for message:', msgId);
+                  const preview = msg.text || (msg.image ? '[Image]' : '[Message]');
+                  NotificationHandler.notifyNewMessage(otherUserName, preview);
+                  notifiedMessageIds.add(msgId);
+                } else {
+                  console.log('Already notified for message:', msgId);
+                }
               });
+            } else {
+              console.log('No new messages (count not increased)');
             }
             
             setMessages(messagesList);
