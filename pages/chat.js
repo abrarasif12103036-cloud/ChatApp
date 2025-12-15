@@ -428,15 +428,16 @@ export default function ChatPage() {
           body: JSON.stringify({ clearAll: true })
         });
         
+        console.log('Clear response status:', res.status);
         const data = await res.json();
-        console.log('Clear response:', data);
+        console.log('Clear response data:', data);
         
-        if (data.ok) {
+        if (res.ok && data.ok) {
           // Immediately clear UI
           setMessages([]);
-          alert(`✓ Chat cleared! ${data.deletedCount || 0} messages deleted from database.`);
+          alert(`✓ Chat cleared! ${data.deletedCount || 0} messages deleted.`);
         } else {
-          alert('Failed to clear messages: ' + (data.error || 'Unknown error'));
+          alert('Failed to clear messages: ' + (data.error || data.message || 'Unknown error'));
         }
       } catch (error) {
         console.error('Failed to clear messages:', error);

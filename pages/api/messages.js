@@ -80,19 +80,31 @@ export default async function handler(req, res) {
   } 
   else if (method === 'DELETE') {
     try {
-      const { messageId, user, clearAll } = req.body;
+      const body = req.body || {};
+      const { messageId, user, clearAll } = body;
       
       // BULK DELETE - Clear all messages from database
       if (clearAll === true) {
         console.log('CLEAR ALL request received - deleting all messages from database');
-        const result = await Message.deleteMany({});
-        console.log('✓ Deleted ' + result.deletedCount + ' messages from database');
-        
-        return res.status(200).json({ 
-          ok: true,
-          message: 'All messages cleared from database',
-          deletedCount: result.deletedCount || 0
-        });
+        try {
+          const result = await Message.deleteMany({});
+          const deletedCount = result.deletedCount || result.n || 0;
+          console.log('✓ Deleted ' + deletedCount + ' messages from database');
+          console.log('Full result:', result);
+          
+          return res.status(200).json({ 
+            ok: true,
+            message: 'All messages cleared from database',
+            deletedCount: deletedCount
+          });
+        } catch (deleteError) {
+          console.error('Error during deleteMany:', deleteError);
+          return res.status(500).json({
+            ok: false,
+            error: 'Failed to delete messages',
+            details: deleteError.message
+          });
+        }
       }
       
       console.log('DELETE request received:', { messageId, user });
