@@ -111,6 +111,18 @@ export default function ChatPage() {
   // Logout function is defined below
 
   useEffect(() => {
+    // Test Android bridge availability immediately
+    console.log('=== ANDROID BRIDGE TEST ===');
+    console.log('window.AndroidNotification exists:', typeof window.AndroidNotification !== 'undefined');
+    console.log('window.AndroidNotification value:', window.AndroidNotification);
+    if (typeof window.AndroidNotification !== 'undefined' && window.AndroidNotification) {
+      console.log('✅ Android bridge is AVAILABLE');
+      console.log('Methods:', Object.getOwnPropertyNames(window.AndroidNotification));
+    } else {
+      console.log('❌ Android bridge is NOT available');
+    }
+    console.log('=== END BRIDGE TEST ===\n');
+
     const user = localStorage.getItem('currentUser');
     console.log('Initializing chat, user:', user);
     if (!user) {
@@ -460,6 +472,10 @@ export default function ChatPage() {
           </div>
         </div>
         <div className={styles.buttons}>
+          <button onClick={() => {
+            console.log('Bridge test clicked');
+            window.open('/bridge-test.html', 'bridgeTest', 'width=800,height=600');
+          }} className={styles.btnSecondary}>Bridge Test</button>
           <button onClick={clearChat} className={styles.btnSecondary}>Clear</button>
           <button onClick={handleLogout} className={styles.btnLogout}>Logout</button>
         </div>
