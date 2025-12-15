@@ -108,12 +108,19 @@ export default function ChatPage() {
     }
   };
 
+  // Logout function is defined below
+
   useEffect(() => {
     const user = localStorage.getItem('currentUser');
     console.log('Initializing chat, user:', user);
     if (!user) {
       console.log('No user found, redirecting to login');
-      router.push('/');
+      // Only redirect if we're already on chat page (not during initial load)
+      setTimeout(() => {
+        if (!localStorage.getItem('currentUser')) {
+          router.push('/');
+        }
+      }, 100);
       return;
     }
     setCurrentUser(user);
@@ -384,7 +391,7 @@ export default function ChatPage() {
       await fetch('/api/online', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user })
+        body: JSON.stringify({ user: currentUser })
       });
     } catch (error) {
       console.error('Failed to mark user offline during logout:', error);
