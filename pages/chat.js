@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import styles from '@/styles/chat.module.css';
+import NotificationHandler from '@/lib/notificationHandler';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -139,6 +140,7 @@ export default function ChatPage() {
     // Auto-refresh messages, typing status every 1000ms (reduced frequency to prevent blinking)
     let lastMessages = JSON.stringify([]);
     let lastTypingState = false;
+    let lastMessageCount = 0;
     
     const interval = setInterval(() => {
       // Don't poll if user is not logged in
@@ -153,8 +155,25 @@ export default function ChatPage() {
           
           // Only update if messages actually changed
           if (messagesStr !== lastMessages) {
+            // Check if new messages arrived from other user
+            const newMessageCount = messagesList.length;
+            const otherUserName = user === 'Abrar' ? 'Mohona' : 'Abrar';
+            
+            if (newMessageCount > lastMessageCount) {
+              // Get the new messages from other user
+              const newMessages = messagesList.slice(lastMessageCount);
+              const otherUserNewMessages = newMessages.filter(msg => msg.sender === otherUserName);
+              
+              // Send notifications for each new message
+              otherUserNewMessages.forEach(msg => {
+                const preview = msg.text || (msg.image ? '[Image]' : '[Message]');
+                NotificationHandler.notifyNewMessage(otherUserName, preview);
+              });
+            }
+            
             setMessages(messagesList);
             lastMessages = messagesStr;
+            lastMessageCount = newMessageCount;
           }
           
           // Mark unread messages from other user as read (do this silently without re-fetch)
@@ -170,10 +189,14 @@ export default function ChatPage() {
         .then(res => res.json())
         .then(data => {
           const typingUsersList = data.typingUsers || [];
-          const otherIsTyping = typingUsersList.includes(user === 'Abrar' ? 'Mohona' : 'Abrar');
+          const otherUserName = user === 'Abrar' ? 'Mohona' : 'Abrar';
+          const otherIsTyping = typingUsersList.includes(otherUserName);
           
           // Only update if typing state changed
           if (otherIsTyping !== lastTypingState) {
+            if (otherIsTyping) {
+              NotificationHandler.notifyUserTyping(otherUserName);
+            }
             setOtherUserTyping(otherIsTyping);
             lastTypingState = otherIsTyping;
           }
