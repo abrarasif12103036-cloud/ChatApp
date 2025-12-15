@@ -11,6 +11,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.RingtoneManager;
 import android.net.Uri;
+import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 import android.os.Build;
@@ -25,37 +26,56 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        try {
+            setContentView(R.layout.activity_main);
 
-        webView = findViewById(R.id.webview);
-        notificationManager = getSystemService(NotificationManager.class);
-
-        // Create notification channel for Android 8+
-        createNotificationChannel();
-
-        // Configure WebView settings
-        WebSettings webSettings = webView.getSettings();
-        webSettings.setJavaScriptEnabled(true);
-        webSettings.setDomStorageEnabled(true);
-        webSettings.setDatabaseEnabled(true);
-        webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        webSettings.setAllowFileAccess(true);
-        webSettings.setAllowContentAccess(true);
-
-        // Add JavaScript interface for native notifications
-        webView.addJavascriptInterface(new NotificationBridge(this), "AndroidNotification");
-
-        // Set WebViewClient to handle page loading
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public boolean shouldOverrideUrlLoading(WebView view, String url) {
-                view.loadUrl(url);
-                return true;
+            webView = findViewById(R.id.webview);
+            notificationManager = getSystemService(NotificationManager.class);
+            
+            if (webView == null) {
+                Toast.makeText(this, "WebView not found in layout", Toast.LENGTH_LONG).show();
+                return;
             }
-        });
 
-        // Load your webapp
-        webView.loadUrl("https://chern-pryp.vercel.app/chat");
+            // Create notification channel for Android 8+
+            createNotificationChannel();
+
+            // Clear WebView cache to get latest version
+            webView.clearCache(true);
+            webView.clearHistory();
+
+            // Configure WebView settings
+            WebSettings webSettings = webView.getSettings();
+            webSettings.setJavaScriptEnabled(true);
+            webSettings.setDomStorageEnabled(true);
+            webSettings.setDatabaseEnabled(true);
+            webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
+            webSettings.setAllowFileAccess(true);
+            webSettings.setAllowContentAccess(true);
+            webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);  // Disable caching
+
+            // Add JavaScript interface for native notifications
+            webView.addJavascriptInterface(new NotificationBridge(this), "AndroidNotification");
+
+            // Set WebViewClient with error handling
+            webView.setWebViewClient(new WebViewClient() {
+                @Override
+                public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                    view.loadUrl(url);
+                    return true;
+                }
+
+                @Override
+                public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                    Toast.makeText(MainActivity.this, "Error: " + description, Toast.LENGTH_SHORT).show();
+                }
+            });
+
+            // Load production Vercel app
+            webView.loadUrl("https://chern-pryp.vercel.app/chat");
+        } catch (Exception e) {
+            Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
     private void createNotificationChannel() {
@@ -115,6 +135,9 @@ public class MainActivity extends AppCompatActivity {
             webView.goBack();
         } else {
             super.onBackPressed();
+        }
+    }
+}
         }
     }
 }
