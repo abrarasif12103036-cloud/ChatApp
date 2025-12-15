@@ -34,6 +34,16 @@ public class NotificationBridge {
     }
 
     /**
+     * Test method to verify the bridge is working
+     * Called from JavaScript via: window.AndroidNotification.test()
+     * Returns a message to verify the bridge is accessible
+     */
+    @JavascriptInterface
+    public String test() {
+        return "Android bridge is working! This is from NotificationBridge.test()";
+    }
+
+    /**
      * Internal method to create and show the notification
      */
     private void showNotificationNative(String title, String message, String sender) {

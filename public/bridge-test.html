@@ -82,6 +82,7 @@
 
         <div>
             <button onclick="testBridge()">Test Bridge</button>
+            <button onclick="testBridgeMethod()">Test Bridge Method</button>
             <button onclick="showTestNotification()">Show Notification</button>
             <button onclick="clearLog()">Clear Log</button>
         </div>
@@ -125,6 +126,13 @@
                     addLog('❌ showNotification() is NOT a function', 'error');
                     addLog('Type: ' + typeof window.AndroidNotification.showNotification);
                 }
+
+                // Check if test method exists
+                if (typeof window.AndroidNotification.test === 'function') {
+                    addLog('✅ test() method is a FUNCTION', 'success');
+                } else {
+                    addLog('❌ test() is NOT a function', 'error');
+                }
             } else {
                 addLog('❌ window.AndroidNotification is UNDEFINED', 'error');
                 addLog('Available global objects:', 'error');
@@ -137,6 +145,23 @@
             }
             
             addLog('=== End Bridge Test ===');
+        }
+
+        function testBridgeMethod() {
+            addLog('=== Testing Bridge Method Call ===');
+            
+            if (typeof window.AndroidNotification !== 'undefined' && window.AndroidNotification.test) {
+                try {
+                    addLog('Calling window.AndroidNotification.test()...');
+                    const result = window.AndroidNotification.test();
+                    addLog('✅ test() returned: ' + result, 'success');
+                } catch (error) {
+                    addLog('❌ Error calling test(): ' + error.message, 'error');
+                    addLog('Stack: ' + error.stack);
+                }
+            } else {
+                addLog('❌ Cannot call test() - method not available', 'error');
+            }
         }
 
         function showTestNotification() {
