@@ -42,4 +42,9 @@ public class NotificationBridge {
 
         notificationManager.notify(NOTIFICATION_ID, builder.build());
     }
+
+    @JavascriptInterface
+    public String test() {
+        return "Android bridge is working! This is from NotificationBridge.test()";
+    }
 }
