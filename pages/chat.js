@@ -286,6 +286,11 @@ export default function ChatPage() {
 
   const handleDeleteMessage = async (messageId) => {
     try {
+      if (!currentUser) {
+        alert('User not loaded. Please refresh the page.');
+        return;
+      }
+
       const confirmDelete = window.confirm('Are you sure you want to delete this message?');
       if (!confirmDelete) return;
 
