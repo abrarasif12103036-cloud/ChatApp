@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import styles from '@/styles/chat.module.css';
-import NotificationHandler from '@/lib/notificationHandler';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -108,31 +107,12 @@ export default function ChatPage() {
     }
   };
 
-  // Logout function is defined below
-
   useEffect(() => {
-    // Test Android bridge availability immediately
-    console.log('=== ANDROID BRIDGE TEST ===');
-    console.log('window.AndroidNotification exists:', typeof window.AndroidNotification !== 'undefined');
-    console.log('window.AndroidNotification value:', window.AndroidNotification);
-    if (typeof window.AndroidNotification !== 'undefined' && window.AndroidNotification) {
-      console.log('✅ Android bridge is AVAILABLE');
-      console.log('Methods:', Object.getOwnPropertyNames(window.AndroidNotification));
-    } else {
-      console.log('❌ Android bridge is NOT available');
-    }
-    console.log('=== END BRIDGE TEST ===\n');
-
     const user = localStorage.getItem('currentUser');
     console.log('Initializing chat, user:', user);
     if (!user) {
       console.log('No user found, redirecting to login');
-      // Only redirect if we're already on chat page (not during initial load)
-      setTimeout(() => {
-        if (!localStorage.getItem('currentUser')) {
-          router.push('/');
-        }
-      }, 100);
+      router.push('/');
       return;
     }
     setCurrentUser(user);
@@ -159,22 +139,10 @@ export default function ChatPage() {
     // Auto-refresh messages, typing status every 1000ms (reduced frequency to prevent blinking)
     let lastMessages = JSON.stringify([]);
     let lastTypingState = false;
-    let lastMessageCount = 0;
-    let notifiedMessageIds = new Set();
-    let pollCount = 0;
-    let userLoggedOnce = false;
     
     const interval = setInterval(() => {
-      pollCount++;
       // Don't poll if user is not logged in
       if (!user) return;
-
-      // Log user info once
-      if (!userLoggedOnce) {
-        console.log(`🔑 LOGGED IN AS: "${user}"`);
-        console.log(`👥 WAITING FOR MESSAGES FROM: "${user === 'Abrar' ? 'Mohona' : 'Abrar'}"`);
-        userLoggedOnce = true;
-      }
 
       // Fetch messages
       fetch('/api/messages')
@@ -182,53 +150,11 @@ export default function ChatPage() {
         .then(data => {
           const messagesList = data.messages || [];
           const messagesStr = JSON.stringify(messagesList);
-          const otherUserName = user === 'Abrar' ? 'Mohona' : 'Abrar';
-          
-          console.log(`[Poll #${pollCount}] Current message count: ${messagesList.length}, Last count: ${lastMessageCount}`);
           
           // Only update if messages actually changed
           if (messagesStr !== lastMessages) {
-            console.log(`[Poll #${pollCount}] ✓ Messages changed! Comparing counts...`);
-            console.log('Messages changed! Old count:', lastMessageCount, 'New count:', messagesList.length);
-            
-            // Check if new messages arrived from other user
-            const newMessageCount = messagesList.length;
-            
-            if (newMessageCount > lastMessageCount) {
-              console.log('✓ NEW MESSAGES DETECTED!');
-              console.log('New messages detected! Difference:', newMessageCount - lastMessageCount);
-              
-              // Get the new messages from other user
-              const newMessages = messagesList.slice(lastMessageCount);
-              console.log('New messages slice:', newMessages.length, 'messages');
-              console.log('Full new messages:', JSON.stringify(newMessages, null, 2));
-              
-              const otherUserNewMessages = newMessages.filter(msg => msg.sender === otherUserName);
-              console.log(`Filtering for sender="${otherUserName}": Found ${otherUserNewMessages.length} matching messages`);
-              console.log('Message senders in slice:', newMessages.map(m => m.sender).join(', '));
-              
-              // Send notifications for each new message
-              otherUserNewMessages.forEach(msg => {
-                const msgId = msg.id || msg._id;
-                if (!notifiedMessageIds.has(msgId)) {
-                  console.log('🔔 SENDING NOTIFICATION for message:', msgId);
-                  const preview = msg.text || (msg.image ? '[Image]' : '[Message]');
-                  NotificationHandler.notifyNewMessage(otherUserName, preview);
-                  notifiedMessageIds.add(msgId);
-                } else {
-                  console.log('Already notified for message:', msgId);
-                }
-              });
-            } else {
-              console.log(`[Poll #${pollCount}] ❌ No new messages (count not increased). Current: ${newMessageCount}, Last: ${lastMessageCount}`);
-              console.log('No new messages (count not increased)');
-            }
-            
             setMessages(messagesList);
             lastMessages = messagesStr;
-            lastMessageCount = newMessageCount;
-          } else {
-            console.log(`[Poll #${pollCount}] ✗ Messages NOT changed (same JSON string)`);
           }
           
           // Mark unread messages from other user as read (do this silently without re-fetch)
@@ -244,14 +170,10 @@ export default function ChatPage() {
         .then(res => res.json())
         .then(data => {
           const typingUsersList = data.typingUsers || [];
-          const otherUserName = user === 'Abrar' ? 'Mohona' : 'Abrar';
-          const otherIsTyping = typingUsersList.includes(otherUserName);
+          const otherIsTyping = typingUsersList.includes(user === 'Abrar' ? 'Mohona' : 'Abrar');
           
           // Only update if typing state changed
           if (otherIsTyping !== lastTypingState) {
-            if (otherIsTyping) {
-              NotificationHandler.notifyUserTyping(otherUserName);
-            }
             setOtherUserTyping(otherIsTyping);
             lastTypingState = otherIsTyping;
           }
@@ -295,22 +217,12 @@ export default function ChatPage() {
   }, [messages, otherUserTyping]);
 
   const handleImageSelect = (e) => {
-    console.log('handleImageSelect triggered');
     const file = e.target.files[0];
-    console.log('File selected:', file);
-    if (!file) {
-      console.warn('No file selected');
-      return;
-    }
+    if (!file) return;
 
-    console.log('File details:', { name: file.name, size: file.size, type: file.type });
     const reader = new FileReader();
     reader.onload = (event) => {
-      console.log('FileReader onload triggered');
       setPreview(event.target.result);
-    };
-    reader.onerror = (error) => {
-      console.error('FileReader error:', error);
     };
     reader.readAsDataURL(file);
   };
@@ -449,7 +361,7 @@ export default function ChatPage() {
       await fetch('/api/online', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user: currentUser })
+        body: JSON.stringify({ user })
       });
     } catch (error) {
       console.error('Failed to mark user offline during logout:', error);
@@ -491,10 +403,6 @@ export default function ChatPage() {
           </div>
         </div>
         <div className={styles.buttons}>
-          <button onClick={() => {
-            console.log('Bridge test clicked');
-            window.open('/bridge-test.html', 'bridgeTest', 'width=800,height=600');
-          }} className={styles.btnSecondary}>Bridge Test</button>
           <button onClick={clearChat} className={styles.btnSecondary}>Clear</button>
           <button onClick={handleLogout} className={styles.btnLogout}>Logout</button>
         </div>
@@ -831,22 +739,8 @@ export default function ChatPage() {
             onChange={handleImageSelect}
             className={styles.fileInput}
             ref={fileInputRef}
-            capture="environment"
           />
-          <button 
-            type="button" 
-            onClick={(e) => {
-              e.preventDefault();
-              console.log('+ button clicked, fileInputRef:', fileInputRef.current);
-              if (fileInputRef.current) {
-                fileInputRef.current.click();
-              } else {
-                console.error('fileInputRef is not available');
-              }
-            }} 
-            className={styles.imgBtn} 
-            title="Add image"
-          >
+          <button type="button" onClick={() => fileInputRef.current?.click()} className={styles.imgBtn} title="Add image">
             +
           </button>
           
