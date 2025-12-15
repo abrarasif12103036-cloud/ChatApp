@@ -63,9 +63,9 @@ export default function ChatPage() {
       });
 
       if (res.ok) {
-        const data = await res.json();
-        setMessages(data.messages || []);
-        return data;
+        // Don't update messages here - the polling will handle it
+        // Just mark them as read in the backend
+        return res.json();
       }
     } catch (error) {
       // Silently ignore network errors
@@ -419,12 +419,28 @@ export default function ChatPage() {
   };
 
   const clearChat = async () => {
-    if (confirm('Clear all messages?')) {
+    if (confirm('Clear all messages from both users? This cannot be undone.')) {
       try {
-        await fetch('/api/messages', { method: 'DELETE' });
-        setMessages([]);
+        console.log('Clearing all messages...');
+        const res = await fetch('/api/messages', {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ clearAll: true })
+        });
+        
+        const data = await res.json();
+        console.log('Clear response:', data);
+        
+        if (data.ok) {
+          // Immediately clear UI
+          setMessages([]);
+          alert(`✓ Chat cleared! ${data.deletedCount || 0} messages deleted from database.`);
+        } else {
+          alert('Failed to clear messages: ' + (data.error || 'Unknown error'));
+        }
       } catch (error) {
         console.error('Failed to clear messages:', error);
+        alert('Error clearing chat: ' + error.message);
       }
     }
   };

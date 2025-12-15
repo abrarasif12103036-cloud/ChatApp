@@ -80,7 +80,20 @@ export default async function handler(req, res) {
   } 
   else if (method === 'DELETE') {
     try {
-      const { messageId, user } = req.body;
+      const { messageId, user, clearAll } = req.body;
+      
+      // BULK DELETE - Clear all messages from database
+      if (clearAll === true) {
+        console.log('CLEAR ALL request received - deleting all messages from database');
+        const result = await Message.deleteMany({});
+        console.log('✓ Deleted ' + result.deletedCount + ' messages from database');
+        
+        return res.status(200).json({ 
+          ok: true,
+          message: 'All messages cleared from database',
+          deletedCount: result.deletedCount || 0
+        });
+      }
       
       console.log('DELETE request received:', { messageId, user });
       
@@ -112,28 +125,23 @@ export default async function handler(req, res) {
         });
       }
       
-      // Mark the message as deleted instead of removing it
-      const updatedMessage = await Message.findByIdAndUpdate(
-        messageId,
-        { isDeleted: true },
-        { new: true }
-      );
+      // Hard delete the individual message
+      const deletedMessage = await Message.findByIdAndDelete(messageId);
       
-      console.log('Message marked as deleted:', updatedMessage._id);
+      console.log('Message deleted from database:', deletedMessage._id);
       
       return res.status(200).json({ 
         ok: true,
         message: 'Message deleted successfully',
-        updatedMessage: {
-          id: updatedMessage._id,
-          sender: updatedMessage.sender,
-          text: updatedMessage.text,
-          image: updatedMessage.image,
-          timestamp: updatedMessage.timestamp,
-          isRead: updatedMessage.isRead,
-          replyTo: updatedMessage.replyTo,
-          reactions: updatedMessage.reactions || {},
-          isDeleted: updatedMessage.isDeleted
+        deletedMessage: {
+          id: deletedMessage._id,
+          sender: deletedMessage.sender,
+          text: deletedMessage.text,
+          image: deletedMessage.image,
+          timestamp: deletedMessage.timestamp,
+          isRead: deletedMessage.isRead,
+          replyTo: deletedMessage.replyTo,
+          reactions: deletedMessage.reactions || {}
         }
       });
     } catch (error) {
