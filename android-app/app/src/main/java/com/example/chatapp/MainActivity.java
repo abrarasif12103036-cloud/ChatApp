@@ -8,23 +8,18 @@ import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
-import android.media.RingtoneManager;
 import android.net.Uri;
-import android.webkit.JavascriptInterface;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
 import android.os.Build;
+import android.util.Log;
 
 public class MainActivity extends AppCompatActivity {
 
     private WebView webView;
     private NotificationManager notificationManager;
     private static final String CHANNEL_ID = "chat_notifications";
-    private static final int NOTIFICATION_ID = 1;
     private ValueCallback<Uri[]> filePathCallback;
     private static final int FILE_CHOOSER_RESULT_CODE = 1;
 
@@ -42,14 +37,11 @@ public class MainActivity extends AppCompatActivity {
                 return;
             }
 
-            // Create notification channel for Android 8+
             createNotificationChannel();
 
-            // Clear WebView cache to get latest version
             webView.clearCache(true);
             webView.clearHistory();
 
-            // Configure WebView settings
             WebSettings webSettings = webView.getSettings();
             webSettings.setJavaScriptEnabled(true);
             webSettings.setDomStorageEnabled(true);
@@ -57,9 +49,8 @@ public class MainActivity extends AppCompatActivity {
             webSettings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
             webSettings.setAllowFileAccess(true);
             webSettings.setAllowContentAccess(true);
-            webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);  // Disable caching
+            webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
 
-            // Set WebViewClient with error handling
             webView.setWebViewClient(new WebViewClient() {
                 @Override
                 public boolean shouldOverrideUrlLoading(WebView view, String url) {
@@ -70,6 +61,14 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
                     Toast.makeText(MainActivity.this, "Error: " + description, Toast.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onPageFinished(WebView view, String url) {
+                    super.onPageFinished(view, url);
+                    view.evaluateJavascript("(function() { return window.AndroidNotification !== undefined; })();", value -> {
+                        Log.d("WebAppBridge", "Is AndroidNotification defined? " + value);
+                    });
                 }
             });
 
@@ -88,11 +87,9 @@ public class MainActivity extends AppCompatActivity {
                 }
             });
 
-            // Add JavaScript interface for native notifications - MUST be before loadUrl
             webView.addJavascriptInterface(new NotificationBridge(this, notificationManager), "AndroidNotification");
             Toast.makeText(this, "JavaScript interface 'AndroidNotification' added", Toast.LENGTH_LONG).show();
 
-            // Load production Vercel app
             webView.loadUrl("https://chern-pryp.vercel.app/chat");
         } catch (Exception e) {
             Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
@@ -128,10 +125,6 @@ public class MainActivity extends AppCompatActivity {
             notificationManager.createNotificationChannel(channel);
         }
     }
-
-    // JavaScript Interface class
-    // Now using external NotificationBridge.java file instead of inner class
-    // to ensure it's properly exposed to JavaScript
 
     @Override
     public void onBackPressed() {
