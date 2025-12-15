@@ -162,11 +162,19 @@ export default function ChatPage() {
     let lastMessageCount = 0;
     let notifiedMessageIds = new Set();
     let pollCount = 0;
+    let userLoggedOnce = false;
     
     const interval = setInterval(() => {
       pollCount++;
       // Don't poll if user is not logged in
       if (!user) return;
+
+      // Log user info once
+      if (!userLoggedOnce) {
+        console.log(`🔑 LOGGED IN AS: "${user}"`);
+        console.log(`👥 WAITING FOR MESSAGES FROM: "${user === 'Abrar' ? 'Mohona' : 'Abrar'}"`);
+        userLoggedOnce = true;
+      }
 
       // Fetch messages
       fetch('/api/messages')
@@ -196,7 +204,8 @@ export default function ChatPage() {
               console.log('Full new messages:', JSON.stringify(newMessages, null, 2));
               
               const otherUserNewMessages = newMessages.filter(msg => msg.sender === otherUserName);
-              console.log('New messages from', otherUserName + ':', otherUserNewMessages.length);
+              console.log(`Filtering for sender="${otherUserName}": Found ${otherUserNewMessages.length} matching messages`);
+              console.log('Message senders in slice:', newMessages.map(m => m.sender).join(', '));
               
               // Send notifications for each new message
               otherUserNewMessages.forEach(msg => {
