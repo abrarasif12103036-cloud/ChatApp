@@ -53,9 +53,11 @@ export default async function handler(req, res) {
       
       await db.ref(`messages/${messageId}`).set(messageData);
       
-      // Send push notification to all users
+      // Send push notification to all users (non-blocking, errors are logged)
       if (body.text) {
-        await broadcastNotification(body.sender || 'Unknown', body.text, body.sender);
+        broadcastNotification(body.sender || 'Unknown', body.text, body.sender).catch(err => {
+          console.error('Failed to broadcast notification:', err.message);
+        });
       }
       
       return res.status(201).json({ 
