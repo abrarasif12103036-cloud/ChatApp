@@ -1,5 +1,4 @@
-import dbConnect from '@/lib/mongodb';
-import OnlineUser from '@/lib/models/OnlineUser';
+import db from '@/lib/firebase';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -7,38 +6,50 @@ export default async function handler(req, res) {
   const method = req.method;
   
   try {
-    await dbConnect();
-    
     if (method === 'POST') {
       // Mark user as online
       const { user } = req.body;
       if (user) {
-        await OnlineUser.updateOne(
-          { user },
-          { user, status: 'online', lastUpdate: new Date() },
-          { upsert: true }
-        );
+        await db.ref(`onlineUsers/${user}`).set({
+          user,
+          status: 'online',
+          lastUpdate: new Date().toISOString()
+        });
       }
       
-      const onlineUsers = await OnlineUser.find({});
+      const snapshot = await db.ref('onlineUsers').once('value');
+      const onlineUsersObj = snapshot.val() || {};
+      const onlineUsers = Object.keys(onlineUsersObj);
+      
       return res.status(200).json({
         ok: true,
-        onlineUsers: onlineUsers.map(u => u.user)
+        onlineUsers
       });
     }
     
     if (method === 'GET') {
       // Get list of online users
-      const now = new Date();
-      const fiveSecondsAgo = new Date(now.getTime() - 5000);
+      const now = Date.now();
+      const fiveSecondsAgo = now - 5000;
+      
+      const snapshot = await db.ref('onlineUsers').once('value');
+      const onlineUsersObj = snapshot.val() || {};
       
       // Remove users that haven't been updated in 5 seconds
-      await OnlineUser.deleteMany({ lastUpdate: { $lt: fiveSecondsAgo } });
+      Object.entries(onlineUsersObj).forEach(async ([user, data]) => {
+        const lastUpdate = new Date(data.lastUpdate).getTime();
+        if (lastUpdate < fiveSecondsAgo) {
+          await db.ref(`onlineUsers/${user}`).remove();
+        }
+      });
       
-      const onlineUsers = await OnlineUser.find({});
+      const updatedSnapshot = await db.ref('onlineUsers').once('value');
+      const updatedOnlineUsersObj = updatedSnapshot.val() || {};
+      const onlineUsers = Object.keys(updatedOnlineUsersObj);
+      
       return res.status(200).json({
         ok: true,
-        onlineUsers: onlineUsers.map(u => u.user)
+        onlineUsers
       });
     }
     
@@ -46,13 +57,16 @@ export default async function handler(req, res) {
       // Mark user as offline
       const { user } = req.body;
       if (user) {
-        await OnlineUser.deleteOne({ user });
+        await db.ref(`onlineUsers/${user}`).remove();
       }
       
-      const onlineUsers = await OnlineUser.find({});
+      const snapshot = await db.ref('onlineUsers').once('value');
+      const onlineUsersObj = snapshot.val() || {};
+      const onlineUsers = Object.keys(onlineUsersObj);
+      
       return res.status(200).json({
         ok: true,
-        onlineUsers: onlineUsers.map(u => u.user)
+        onlineUsers
       });
     }
     

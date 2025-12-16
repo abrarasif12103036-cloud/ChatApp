@@ -39,6 +39,11 @@ pids
 .env.test.local
 .env.production.local
 
+# Firebase service account keys (SECURITY CRITICAL)
+*.json
+firebase-key.json
+service-account-key.json
+
 # Message data storage
 /data/
 

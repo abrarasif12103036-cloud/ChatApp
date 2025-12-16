@@ -1,5 +1,4 @@
-import dbConnect from '@/lib/mongodb';
-import TypingUser from '@/lib/models/TypingUser';
+import db from '@/lib/firebase';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -7,41 +6,53 @@ export default async function handler(req, res) {
   const method = req.method;
   
   try {
-    await dbConnect();
-    
     if (method === 'POST') {
       // Mark user as typing
       const { user, isTyping } = req.body;
       
       if (isTyping) {
-        await TypingUser.updateOne(
-          { user },
-          { user, isTyping: true, lastUpdate: new Date() },
-          { upsert: true }
-        );
+        await db.ref(`typingUsers/${user}`).set({
+          user,
+          isTyping: true,
+          lastUpdate: new Date().toISOString()
+        });
       } else {
-        await TypingUser.deleteOne({ user });
+        await db.ref(`typingUsers/${user}`).remove();
       }
       
-      const typingUsers = await TypingUser.find({});
+      const snapshot = await db.ref('typingUsers').once('value');
+      const typingUsersObj = snapshot.val() || {};
+      const typingUsers = Object.keys(typingUsersObj);
+      
       return res.status(200).json({
         ok: true,
-        typingUsers: typingUsers.map(u => u.user)
+        typingUsers
       });
     }
     
     if (method === 'GET') {
       // Get list of typing users
-      const now = new Date();
-      const threeSecondsAgo = new Date(now.getTime() - 3000);
+      const now = Date.now();
+      const threeSecondsAgo = now - 3000;
+      
+      const snapshot = await db.ref('typingUsers').once('value');
+      const typingUsersObj = snapshot.val() || {};
       
       // Remove users that haven't been updated in 3 seconds (stopped typing)
-      await TypingUser.deleteMany({ lastUpdate: { $lt: threeSecondsAgo } });
+      Object.entries(typingUsersObj).forEach(async ([user, data]) => {
+        const lastUpdate = new Date(data.lastUpdate).getTime();
+        if (lastUpdate < threeSecondsAgo) {
+          await db.ref(`typingUsers/${user}`).remove();
+        }
+      });
       
-      const typingUsers = await TypingUser.find({});
+      const updatedSnapshot = await db.ref('typingUsers').once('value');
+      const updatedTypingUsersObj = updatedSnapshot.val() || {};
+      const typingUsers = Object.keys(updatedTypingUsersObj);
+      
       return res.status(200).json({
         ok: true,
-        typingUsers: typingUsers.map(u => u.user)
+        typingUsers
       });
     }
     

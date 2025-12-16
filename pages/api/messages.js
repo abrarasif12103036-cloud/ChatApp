@@ -1,37 +1,30 @@
-import connectDB from '../../lib/mongodb';
-import Message from '../../lib/models/Message';
+import db from '../../lib/firebase';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
-  
-  try {
-    await connectDB();
-  } catch (error) {
-    return res.status(500).json({ 
-      ok: false,
-      error: 'Database connection failed',
-      details: error.message
-    });
-  }
 
   const method = req.method;
   
   if (method === 'GET') {
     try {
-      const messages = await Message.find().sort({ createdAt: 1 });
+      const snapshot = await db.ref('messages').orderByChild('timestamp').once('value');
+      const messagesObj = snapshot.val() || {};
+      
+      const messages = Object.entries(messagesObj).map(([id, msg]) => ({
+        id,
+        sender: msg.sender,
+        text: msg.text,
+        image: msg.image || null,
+        timestamp: msg.timestamp,
+        isRead: msg.isRead || false,
+        replyTo: msg.replyTo || null,
+        reactions: msg.reactions || {},
+        isDeleted: msg.isDeleted || false
+      }));
+      
       return res.status(200).json({ 
         ok: true,
-        messages: messages.map(msg => ({
-          id: msg._id,
-          sender: msg.sender,
-          text: msg.text,
-          image: msg.image,
-          timestamp: msg.timestamp,
-          isRead: msg.isRead,
-          replyTo: msg.replyTo,
-          reactions: msg.reactions || {},
-          isDeleted: msg.isDeleted || false
-        }))
+        messages
       });
     } catch (error) {
       return res.status(500).json({ 
@@ -44,30 +37,26 @@ export default async function handler(req, res) {
   else if (method === 'POST') {
     try {
       const body = req.body || {};
+      const messageId = Date.now().toString();
       
       const messageData = {
         sender: body.sender || 'Unknown',
         text: body.text || '',
         image: body.image || null,
         timestamp: new Date().toISOString(),
-        replyTo: body.replyTo || null
+        replyTo: body.replyTo || null,
+        isRead: false,
+        reactions: {},
+        isDeleted: false
       };
       
-      const newMessage = new Message(messageData);
-      await newMessage.save();
+      await db.ref(`messages/${messageId}`).set(messageData);
       
       return res.status(201).json({ 
         ok: true,
         message: {
-          id: newMessage._id,
-          sender: newMessage.sender,
-          text: newMessage.text,
-          image: newMessage.image,
-          timestamp: newMessage.timestamp,
-          isRead: newMessage.isRead,
-          replyTo: newMessage.replyTo,
-          reactions: newMessage.reactions || {},
-          isDeleted: newMessage.isDeleted || false
+          id: messageId,
+          ...messageData
         }
       });
     } catch (error) {
@@ -80,34 +69,16 @@ export default async function handler(req, res) {
   } 
   else if (method === 'DELETE') {
     try {
-      const body = req.body || {};
-      const { messageId, user, clearAll } = body;
+      const { messageId, user, clearAll } = req.body;
       
-      // BULK DELETE - Clear all messages from database
       if (clearAll === true) {
-        console.log('CLEAR ALL request received - deleting all messages from database');
-        try {
-          const result = await Message.deleteMany({});
-          const deletedCount = result.deletedCount || result.n || 0;
-          console.log('✓ Deleted ' + deletedCount + ' messages from database');
-          console.log('Full result:', result);
-          
-          return res.status(200).json({ 
-            ok: true,
-            message: 'All messages cleared from database',
-            deletedCount: deletedCount
-          });
-        } catch (deleteError) {
-          console.error('Error during deleteMany:', deleteError);
-          return res.status(500).json({
-            ok: false,
-            error: 'Failed to delete messages',
-            details: deleteError.message
-          });
-        }
+        console.log('CLEAR ALL request received');
+        await db.ref('messages').remove();
+        return res.status(200).json({ 
+          ok: true,
+          message: 'All messages cleared'
+        });
       }
-      
-      console.log('DELETE request received:', { messageId, user });
       
       if (!messageId) {
         return res.status(400).json({ 
@@ -116,10 +87,8 @@ export default async function handler(req, res) {
         });
       }
       
-      // Find the message to verify ownership
-      const message = await Message.findById(messageId);
-      
-      console.log('Message found:', { id: message?._id, sender: message?.sender, user });
+      const snapshot = await db.ref(`messages/${messageId}`).once('value');
+      const message = snapshot.val();
       
       if (!message) {
         return res.status(404).json({ 
@@ -128,33 +97,18 @@ export default async function handler(req, res) {
         });
       }
       
-      // Verify the user owns this message
       if (message.sender !== user) {
-        console.log('Ownership check failed:', { messageSender: message.sender, requestUser: user });
         return res.status(403).json({ 
           ok: false,
           error: 'You can only delete your own messages'
         });
       }
       
-      // Hard delete the individual message
-      const deletedMessage = await Message.findByIdAndDelete(messageId);
-      
-      console.log('Message deleted from database:', deletedMessage._id);
+      await db.ref(`messages/${messageId}`).remove();
       
       return res.status(200).json({ 
         ok: true,
-        message: 'Message deleted successfully',
-        deletedMessage: {
-          id: deletedMessage._id,
-          sender: deletedMessage.sender,
-          text: deletedMessage.text,
-          image: deletedMessage.image,
-          timestamp: deletedMessage.timestamp,
-          isRead: deletedMessage.isRead,
-          replyTo: deletedMessage.replyTo,
-          reactions: deletedMessage.reactions || {}
-        }
+        message: 'Message deleted successfully'
       });
     } catch (error) {
       console.error('DELETE error:', error);
@@ -166,29 +120,41 @@ export default async function handler(req, res) {
     }
   } 
   else if (method === 'PUT') {
-    // Mark messages as read
     try {
       const { recipientUser } = req.body;
       
-      await Message.updateMany(
-        { sender: { $ne: recipientUser }, isRead: false },
-        { isRead: true }
-      );
+      const snapshot = await db.ref('messages').once('value');
+      const messagesObj = snapshot.val() || {};
       
-      const messages = await Message.find().sort({ createdAt: 1 });
+      const updates = {};
+      Object.entries(messagesObj).forEach(([id, msg]) => {
+        if (msg.sender !== recipientUser && !msg.isRead) {
+          updates[`messages/${id}/isRead`] = true;
+        }
+      });
+      
+      if (Object.keys(updates).length > 0) {
+        await db.ref().update(updates);
+      }
+      
+      const updatedSnapshot = await db.ref('messages').orderByChild('timestamp').once('value');
+      const updatedMessagesObj = updatedSnapshot.val() || {};
+      
+      const messages = Object.entries(updatedMessagesObj).map(([id, msg]) => ({
+        id,
+        sender: msg.sender,
+        text: msg.text,
+        image: msg.image || null,
+        timestamp: msg.timestamp,
+        isRead: msg.isRead || false,
+        replyTo: msg.replyTo || null,
+        reactions: msg.reactions || {},
+        isDeleted: msg.isDeleted || false
+      }));
+      
       return res.status(200).json({ 
         ok: true,
-        messages: messages.map(msg => ({
-          id: msg._id,
-          sender: msg.sender,
-          text: msg.text,
-          image: msg.image,
-          replyTo: msg.replyTo || null,
-          timestamp: msg.timestamp,
-          isRead: msg.isRead,
-          reactions: msg.reactions || {},
-          isDeleted: msg.isDeleted || false
-        }))
+        messages
       });
     } catch (error) {
       return res.status(500).json({ 
@@ -204,9 +170,7 @@ export default async function handler(req, res) {
   else {
     return res.status(405).json({ 
       ok: false,
-      error: 'Method not allowed',
-      received: method,
-      allowed: ['GET', 'POST', 'DELETE', 'PUT']
+      error: 'Method not allowed'
     });
   }
 }
