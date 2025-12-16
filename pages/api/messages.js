@@ -1,4 +1,5 @@
 import db from '../../lib/firebase';
+import { broadcastNotification } from '../../lib/notificationHandler';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
@@ -51,6 +52,11 @@ export default async function handler(req, res) {
       };
       
       await db.ref(`messages/${messageId}`).set(messageData);
+      
+      // Send push notification to all users
+      if (body.text) {
+        await broadcastNotification(body.sender || 'Unknown', body.text, body.sender);
+      }
       
       return res.status(201).json({ 
         ok: true,
