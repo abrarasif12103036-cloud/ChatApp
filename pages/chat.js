@@ -501,9 +501,9 @@ export default function ChatPage() {
           </div>
         </div>
         <div className={styles.buttons}>
-          <div className={notificationStyles.notificationContainer}>
+          {/* <div className={notificationStyles.notificationContainer}>
             <NotificationPanel />
-          </div>
+          </div> */}
           <button onClick={clearChat} className={styles.btnSecondary}>Clear</button>
           <button onClick={handleReload} className={styles.btnReload} title="Reload messages">↻</button>
           <button onClick={handleLogout} className={styles.btnLogout}>Logout</button>
