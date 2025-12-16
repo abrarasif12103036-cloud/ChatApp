@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background white -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M0,0 L108,0 L108,108 L0,108 Z" />
+
+    <!-- Petal 1 (top) - White -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M54,15 Q68,20 68,40 Q68,60 54,65 Q40,60 40,40 Q40,20 54,15Z" />
+
+    <!-- Petal 2 (top-right) - White -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M80,28 Q92,32 94,50 Q94,68 78,72 Q70,62 72,48 Q74,36 80,28Z" />
+
+    <!-- Petal 3 (bottom-right) - White -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M78,80 Q90,88 80,100 Q66,102 60,88 Q64,74 74,76 Q78,78 78,80Z" />
+
+    <!-- Petal 4 (bottom-left) - White -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M30,80 Q18,88 8,100 Q-6,102 0,88 Q4,74 14,76 Q18,78 30,80Z" />
+
+    <!-- Petal 5 (top-left) - White -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M28,28 Q16,32 14,50 Q14,68 30,72 Q38,62 36,48 Q34,36 28,28Z" />
+
+    <!-- Center circle - Yellow -->
+    <path android:fillColor="#FFD700"
+        android:pathData="M54,44 Q64,44 64,54 Q64,64 54,64 Q44,64 44,54 Q44,44 54,44Z" />
+
+    <!-- Center core - Orange -->
+    <path android:fillColor="#FF9500"
+        android:pathData="M54,48 Q60,48 60,54 Q60,60 54,60 Q48,60 48,54 Q48,48 54,48Z" />
+</vector>

@@ -10,6 +10,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import android.content.pm.PackageManager;
+import com.google.firebase.messaging.FirebaseMessaging;
+import java.net.URL;
+import java.net.HttpURLConnection;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -51,6 +54,17 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
+        // Get FCM token and send to backend
+        FirebaseMessaging.getInstance().getToken().addOnCompleteListener(task -> {
+            if (!task.isSuccessful()) {
+                System.err.println("Failed to get FCM token");
+                return;
+            }
+            String token = task.getResult();
+            System.out.println("FCM Token: " + token);
+            sendTokenToServer(token);
+        });
+
         // Load your chat application from production
         // For local development: webView.loadUrl("http://192.168.0.106:3000/chat");
         // For emulator: webView.loadUrl("http://10.0.2.2:3000/chat");
@@ -64,5 +78,33 @@ public class MainActivity extends AppCompatActivity {
         } else {
             super.onBackPressed();
         }
+    }
+
+    private void sendTokenToServer(String token) {
+        new Thread(() -> {
+            try {
+                String userId = "android_user_" + Build.MODEL + "_" + System.currentTimeMillis() % 10000;
+                
+                URL url = new URL("https://chern-pryp.vercel.app/api/fcm-token");
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setRequestMethod("POST");
+                connection.setRequestProperty("Content-Type", "application/json");
+                connection.setDoOutput(true);
+                connection.setConnectTimeout(5000);
+
+                String jsonBody = "{\"userId\":\"" + userId + "\",\"token\":\"" + token + "\"}";
+                try (java.io.OutputStream os = connection.getOutputStream()) {
+                    os.write(jsonBody.getBytes("UTF-8"));
+                    os.flush();
+                }
+
+                int responseCode = connection.getResponseCode();
+                System.out.println("FCM token sent. Response code: " + responseCode);
+                connection.disconnect();
+            } catch (Exception e) {
+                System.err.println("Error sending token to server: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }).start();
     }
 }

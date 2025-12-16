@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Petal 1 (top - 0°) -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M54,10 Q70,15 72,35 Q70,55 54,60 Q38,55 36,35 Q38,15 54,10Z" />
+
+    <!-- Petal 2 (top-right - 72°) -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M85,22 Q98,28 100,48 Q92,65 76,62 Q72,42 80,28 Q82,24 85,22Z" />
+
+    <!-- Petal 3 (bottom-right - 144°) -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M78,80 Q88,94 72,105 Q52,102 50,84 Q58,76 72,80 Q76,81 78,80Z" />
+
+    <!-- Petal 4 (bottom-left - 216°) -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M30,80 Q20,94 4,105 Q-16,102 8,84 Q16,76 30,80 Q34,81 30,80Z" />
+
+    <!-- Petal 5 (top-left - 288°) -->
+    <path android:fillColor="#FFFFFF"
+        android:pathData="M23,22 Q10,28 8,48 Q16,65 32,62 Q36,42 28,28 Q26,24 23,22Z" />
+
+    <!-- Center - Yellow to Orange gradient effect -->
+    <path android:fillColor="#FFD700"
+        android:pathData="M54,42 Q68,42 68,54 Q68,66 54,66 Q40,66 40,54 Q40,42 54,42Z" />
+
+    <!-- Center core - Deep orange -->
+    <path android:fillColor="#FF8C00"
+        android:pathData="M54,46 Q64,46 64,54 Q64,62 54,62 Q44,62 44,54 Q44,46 54,46Z" />
+
+    <!-- Very center - Orange red -->
+    <path android:fillColor="#FF6347"
+        android:pathData="M54,49 Q62,49 62,54 Q62,59 54,59 Q46,59 46,54 Q46,49 54,49Z" />
+</vector>

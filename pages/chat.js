@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/router';
 import styles from '@/styles/chat.module.css';
+import NotificationPanel from '@/components/NotificationPanel';
+import { requestPermissionAndGetToken, listenForForegroundMessages, sendNotification } from '@/lib/firebaseMessaging';
+import notificationStyles from '@/styles/notifications.module.css';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -118,6 +121,17 @@ export default function ChatPage() {
     setCurrentUser(user);
     setOtherUser(user === 'Abrar' ? 'Mohona' : 'Abrar');
     setIsLoading(false);
+
+    // Initialize Firebase notifications
+    const initNotifications = async () => {
+      try {
+        await requestPermissionAndGetToken();
+        listenForForegroundMessages();
+      } catch (error) {
+        console.log('Notifications not available:', error);
+      }
+    };
+    initNotifications();
 
     // Load existing messages from API
     const loadMessages = async () => {
@@ -375,6 +389,22 @@ export default function ChatPage() {
 
       console.log('Message sent successfully');
       
+      // Send notification to other user
+      try {
+        await sendNotification({
+          recipientUser: otherUser,
+          senderUser: currentUser,
+          title: `Message from ${currentUser}`,
+          body: inputValue || '📷 Image',
+          data: {
+            type: 'message',
+            sender: currentUser
+          }
+        });
+      } catch (error) {
+        console.log('Notification send failed (non-critical):', error);
+      }
+      
       // Clear input and reply
       setInputValue('');
       setPreview('');
@@ -471,6 +501,9 @@ export default function ChatPage() {
           </div>
         </div>
         <div className={styles.buttons}>
+          <div className={notificationStyles.notificationContainer}>
+            <NotificationPanel />
+          </div>
           <button onClick={clearChat} className={styles.btnSecondary}>Clear</button>
           <button onClick={handleReload} className={styles.btnReload} title="Reload messages">↻</button>
           <button onClick={handleLogout} className={styles.btnLogout}>Logout</button>
