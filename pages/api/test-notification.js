@@ -2,6 +2,7 @@ import { broadcastNotification } from '../../lib/notificationHandler';
 
 export default async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST');
 
   if (req.method === 'POST') {
     try {
@@ -34,7 +35,7 @@ export default async function handler(req, res) {
   if (req.method === 'GET') {
     return res.status(200).json({
       ok: true,
-      message: 'POST with { senderName: "name", message: "text" } to send test notification'
+      usage: 'POST with { senderName: "name", message: "text" } to send test notification'
     });
   }
 
